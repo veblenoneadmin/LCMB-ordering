@@ -4,14 +4,15 @@ declare(strict_types=1);
 // -----------------------------
 // Database Configuration
 // -----------------------------
-$host     = "shuttle.proxy.rlwy.net";
-$port     = 25965;
+$host     = "mysql.railway.internal";   // IMPORTANT
+$port     = 3306;                       // ALWAYS 3306 internally
 $user     = "root";
-$pass     = "THgMALdtucPApKGCBKzkeMQjyvoNwsLK";
+$pass     = "YOUR_RAILWAY_PASSWORD";
 $dbname   = "railway";
 $charset  = "utf8mb4";
 
-$dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
+$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
+
 
 $pdo = null;
 try {
