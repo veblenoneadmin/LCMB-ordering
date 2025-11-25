@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/../config.php'; // config.php in root
+require_once __DIR__ . '/layout.php';    // layout.php in public
 
 // Fetch orders with items
 $stmt = $pdo->query("
@@ -41,14 +41,14 @@ ob_start();
                     <?php $total += $subtotal; ?>
                     <tr>
                         <td><?= htmlspecialchars($item['item_name']) ?></td>
-                        <td><?= number_format($item['price'],2) ?></td>
+                        <td><?= number_format($item['price'], 2) ?></td>
                         <td><?= $item['quantity'] ?></td>
-                        <td><?= number_format($subtotal,2) ?></td>
+                        <td><?= number_format($subtotal, 2) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <tr class="font-semibold">
                     <td colspan="3" class="text-right">Total:</td>
-                    <td><?= number_format($total,2) ?></td>
+                    <td><?= number_format($total, 2) ?></td>
                 </tr>
             </tbody>
         </table>
