@@ -7,7 +7,7 @@ declare(strict_types=1);
 $host     = "mysql.railway.internal";   // ends in .railway.internal
 $port     = 3306;
 $user     = "root";
-$pass     = "YOUR_INTERNAL_PASSWORD";
+$pass     = "THgMALdtucPApKGCBKzkeMQjyvoNwsLK";
 $dbname   = "railway";
 $charset  = "utf8mb4";
 
