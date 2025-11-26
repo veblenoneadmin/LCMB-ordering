@@ -31,8 +31,9 @@ foreach ($items as $item) {
 $servicem8_email   = getenv('SERVICEM8_EMAIL');
 $servicem8_api_key = getenv('SERVICEM8_API_KEY');
 
+// Debug: make sure variables are loaded (optional, remove after testing)
 if (!$servicem8_email || !$servicem8_api_key) {
-    die("ServiceM8 credentials not set. Add SERVICEM8_EMAIL and SERVICEM8_API_KEY in Railway.");
+    die("ServiceM8 credentials not set. Check Railway variables for PHP service.\nEmail: $servicem8_email\nAPI Key: $servicem8_api_key");
 }
 
 // ========== BUILD JOB DESCRIPTION ==========
@@ -47,7 +48,6 @@ foreach ($items as $i) {
 }
 
 // ========== PAYLOAD FOR SERVICEM8 ==========
-// Must be an array containing job objects
 $payload = [[
     'summary'     => "Order #$order_id - {$order['customer_name']}",
     'description' => $description,
@@ -56,8 +56,7 @@ $payload = [[
 
 // ========== SEND TO SERVICEM8 ==========
 $ch = curl_init("https://api.servicem8.com/api/1.0/job.json");
-
-curl_setopt($ch, CURLOPT_USERPWD, "$servicem8_email:$servicem8_api_key"); // BASIC AUTH
+curl_setopt($ch, CURLOPT_USERPWD, "$servicem8_email:$servicem8_api_key"); // Basic Auth
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json",
     "Accept: application/json"
@@ -68,12 +67,20 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+if (curl_errno($ch)) {
+    die("cURL error: " . curl_error($ch));
+}
+
 curl_close($ch);
 
 // ========== ERROR HANDLING ==========
 if ($http_code < 200 || $http_code >= 300) {
-    die("Failed to send order to ServiceM8. Response: " . $response);
+    die("Failed to send order to ServiceM8. HTTP Code: $http_code\nResponse: $response");
 }
+
+// Optional: log response for debugging
+// file_put_contents(__DIR__ . '/servicem8_response.log', $response);
 
 // ========== UPDATE STATUS IN DATABASE ==========
 $stmt = $pdo->prepare("UPDATE orders SET status = 'sent' WHERE id = ?");
