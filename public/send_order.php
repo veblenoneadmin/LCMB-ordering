@@ -13,12 +13,18 @@ $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
 $items = $stmtItem->fetchAll();
 
-// Send to ServiceM8
+// Calculate total
+$total = 0;
+foreach ($items as $item) {
+    $total += $item['price'] * $item['quantity'];
+}
+
+// Prepare payload for ServiceM8
 $api_key = getenv('SERVICEM8_API_KEY');
 
 $payload = [
     'CustomerName' => $order['customer_name'],
-    'Notes' => 'Order ID: ' . $order_id,
+    'Notes' => "Order ID: $order_id\nCustomer: {$order['customer_name']}\nOrder Date: {$order['order_date']}\nTotal: $" . number_format($total, 2),
     'LineItems' => array_map(fn($i) => [
         'Description' => $i['item_name'],
         'Quantity' => $i['quantity'],
@@ -26,6 +32,7 @@ $payload = [
     ], $items)
 ];
 
+// Send to ServiceM8
 $ch = curl_init("https://api.servicem8.com/api_1.0/job.json");
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Authorization: Bearer $api_key",
@@ -38,7 +45,12 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 $response = curl_exec($ch);
 curl_close($ch);
 
-// Update order status
+// Optional: handle API errors
+if (!$response) {
+    die("Error sending order to ServiceM8.");
+}
+
+// Update order status in database
 $stmt = $pdo->prepare("UPDATE orders SET status = 'sent' WHERE id = ?");
 $stmt->execute([$order_id]);
 
