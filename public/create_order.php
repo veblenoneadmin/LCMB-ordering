@@ -1,17 +1,17 @@
 <?php
-// Safe includes
-require_once __DIR__ . '/../config.php'; // config.php in root, not public
-require_once __DIR__ . '/layout.php';   // layout.php in same folder
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/layout.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer = $_POST['customer_name'] ?? '';
+    $order_date = $_POST['order_date'] ?? date('Y-m-d');
     $items = $_POST['items'] ?? [];
 
     if ($customer && !empty($items)) {
         try {
             // Insert order
-            $stmt = $pdo->prepare("INSERT INTO orders (customer_name, order_date) VALUES (?, NOW())");
-            $stmt->execute([$customer]);
+            $stmt = $pdo->prepare("INSERT INTO orders (customer_name, order_date) VALUES (?, ?)");
+            $stmt->execute([$customer, $order_date]);
             $order_id = $pdo->lastInsertId();
 
             // Insert order items
@@ -25,13 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            header("Location: orders.php");
+            // Redirect to review page
+            header("Location: review_order.php?order_id=$order_id");
             exit();
         } catch (PDOException $e) {
             $error = "Database error: " . $e->getMessage();
         }
     } else {
-        $error = "Customer name and items are required.";
+        $error = "Customer name, order date, and items are required.";
     }
 }
 
@@ -46,6 +47,11 @@ ob_start();
     <div>
         <label class="font-medium">Customer Name</label>
         <input type="text" name="customer_name" class="border rounded px-2 py-1 w-full" required>
+    </div>
+
+    <div>
+        <label class="font-medium">Order Date</label>
+        <input type="date" name="order_date" class="border rounded px-2 py-1 w-full" required value="<?= date('Y-m-d') ?>">
     </div>
 
     <div id="itemsContainer">
@@ -79,3 +85,4 @@ document.getElementById("addItemBtn").onclick = () => {
 <?php
 $content = ob_get_clean();
 renderLayout('Create Order', $content, 'create_order');
+?>
