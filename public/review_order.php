@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/layout.php';
 
 $order_id = $_GET['order_id'] ?? 0;
 
@@ -23,14 +24,25 @@ $items = $stmtItem->fetchAll();
         <th>Item</th>
         <th>Price</th>
         <th>Quantity</th>
+        <th>Subtotal</th>
     </tr>
-    <?php foreach ($items as $item): ?>
+    <?php
+    $total = 0;
+    foreach ($items as $item):
+        $subtotal = $item['price'] * $item['quantity'];
+        $total += $subtotal;
+    ?>
     <tr>
         <td><?= htmlspecialchars($item['item_name']) ?></td>
-        <td><?= htmlspecialchars($item['price']) ?></td>
-        <td><?= htmlspecialchars($item['quantity']) ?></td>
+        <td><?= number_format($item['price'], 2) ?></td>
+        <td><?= $item['quantity'] ?></td>
+        <td><?= number_format($subtotal, 2) ?></td>
     </tr>
     <?php endforeach; ?>
+    <tr>
+        <td colspan="3" style="text-align:right;font-weight:bold;">Total</td>
+        <td style="font-weight:bold;"><?= number_format($total, 2) ?></td>
+    </tr>
 </table>
 
 <form method="post" action="send_order.php">
