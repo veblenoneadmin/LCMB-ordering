@@ -1,13 +1,12 @@
 <?php
 // create_order.php
-// Drop this file into your project. It expects config.php + layout.php (renderLayout) to exist.
-
 require_once __DIR__ . '/../config.php'; // config.php in root
 require_once __DIR__ . '/layout.php';
 
+$message = '';
+
 // Simple DB sanity check
 if (!isset($pdo) || !$pdo instanceof PDO) {
-    // Render a minimal error page using layout if PDO missing
     ob_start();
     echo '<div style="padding:20px; background:#fee; border:1px solid #fbb; border-radius:8px;">';
     echo '<h3>Database connection missing</h3>';
@@ -18,82 +17,109 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
     exit;
 }
 
-// If arrays are not provided by some other include, attempt to load them
-try {
-    if (!isset($products)) {
-        $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-    }
-} catch (Exception $e) {
-    $products = [];
-}
+// Load tables if not already set
+try { $products = $products ?? $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $products = []; }
+try { $split_installations = $split_installations ?? $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM `split_installation` ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $split_installations = []; }
+try { $ducted_installations = $ducted_installations ?? $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $ducted_installations = []; }
+try { $personnel = $personnel ?? $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $personnel = []; }
+try { $equipment = $equipment ?? $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $equipment = []; }
 
-try {
-    if (!isset($split_installations)) {
-        // try possible names
-        $cands = ['split_system_installation','split_installations','split_systems','split_installation'];
-        $found = null;
-        foreach ($cands as $t) {
-            $r = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($t))->fetchColumn();
-            if ($r) { $found = $t; break; }
-        }
-        if ($found) {
-            $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM `$found` ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $split_installations = [];
-        }
-    }
-} catch (Exception $e) {
-    $split_installations = [];
-}
-
-try {
-    if (!isset($ducted_installations)) {
-        $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-    }
-} catch (Exception $e) {
-    $ducted_installations = [];
-}
-
-try {
-    if (!isset($personnel)) {
-        $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-    }
-} catch (Exception $e) {
-    $personnel = [];
-}
-
-try {
-    if (!isset($equipment)) {
-        $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC);
-    }
-} catch (Exception $e) {
-    $equipment = [];
-}
-
-// If the page receives POST, you can rely on your existing backend logic (this form posts fields that match)
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Optional: show a simple message if you want to debug quickly
-    // $message = "Received order POST - check server-side processing.";
-    // But we leave heavy processing to your existing backend code you shared earlier.
+    try {
+        $pdo->beginTransaction();
+
+        // Insert order
+        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt->execute([
+            $_POST['customer_name'] ?? '',
+            $_POST['customer_email'] ?? '',
+            $_POST['contact_number'] ?? '',
+            $_POST['appointment_date'] ?? date('Y-m-d')
+        ]);
+        $order_id = $pdo->lastInsertId();
+
+        $insertItem = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, installation_type, qty, price) VALUES (?, ?, ?, ?, ?, ?)");
+
+        // Products
+        foreach ($_POST['quantity'] ?? [] as $pid => $qty) {
+            $qty = (int)$qty;
+            if ($qty>0) {
+                $price = 0;
+                foreach($products as $p){ if($p['id']==$pid){$price=$p['price'];break;} }
+                $insertItem->execute([$order_id,'product',$pid,null,$qty,$price]);
+            }
+        }
+
+        // Split Installations
+        foreach ($_POST['split'] ?? [] as $sid => $info) {
+            $qty = (int)($info['qty'] ?? 0);
+            if ($qty>0) {
+                $price = 0;
+                foreach($split_installations as $s){ if($s['id']==$sid){$price=$s['price'];break;} }
+                $insertItem->execute([$order_id,'split_installation',$sid,null,$qty,$price]);
+            }
+        }
+
+        // Ducted Installations
+        foreach ($_POST['ducted'] ?? [] as $did => $info) {
+            $qty = (int)($info['qty'] ?? 0);
+            $installation_type = $info['installation_type'] ?? null;
+            if ($qty>0) {
+                $price = 0;
+                foreach($ducted_installations as $d){ if($d['id']==$did){$price=$d['price'];break;} }
+                $insertItem->execute([$order_id,'ducted_installation',$did,$installation_type,$qty,$price]);
+            }
+        }
+
+        // Personnel
+        foreach ($_POST['personnel_hours'] ?? [] as $pid => $hours) {
+            $hours = (float)$hours;
+            if ($hours>0) {
+                $rate = 0;
+                foreach($personnel as $p){ if($p['id']==$pid){$rate=$p['rate'];break;} }
+                $insertItem->execute([$order_id,'personnel',$pid,null,$hours,$rate]);
+            }
+        }
+
+        // Equipment
+        foreach ($_POST['equipment_qty'] ?? [] as $eid => $qty) {
+            $qty = (int)$qty;
+            if ($qty>0) {
+                $rate = 0;
+                foreach($equipment as $e){ if($e['id']==$eid){$rate=$e['rate'];break;} }
+                $insertItem->execute([$order_id,'equipment',$eid,null,$qty,$rate]);
+            }
+        }
+
+        // Other Expenses
+        foreach ($_POST['other_expenses']['amount'] ?? [] as $i => $amt) {
+            $amt = (float)$amt;
+            $name = $_POST['other_expenses']['name'][$i] ?? 'Other expense';
+            if($amt>0) $insertItem->execute([$order_id,'other_expense',null,null,1,$amt]);
+        }
+
+        $pdo->commit();
+        $message = "Order saved successfully! ID: $order_id";
+    } catch(Exception $e) {
+        $pdo->rollBack();
+        $message = "Error saving order: ".$e->getMessage();
+    }
 }
 
 // Render the page content
 ob_start();
 ?>
+
 <style>
-/* Page-specific CSS (keeps things simple, neutral and similar to your screenshot) */
+/* Your existing CSS for layout, tables, summary, buttons, inputs */
 .create-order-grid { display:flex; gap:20px; align-items:flex-start; }
 .create-order-left { flex:1; min-width:0; }
 .create-order-right { width:320px; }
-
 .card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:16px; margin-bottom:18px; box-shadow:0 1px 2px rgba(16,24,40,0.03); }
 .card h4 { margin:0 0 10px 0; font-size:16px; color:#2b3440; }
-
-/* client inputs */
 .client-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .input { width:100%; padding:10px 12px; border:1px solid #dfe6ef; border-radius:6px; font-size:14px; }
-
-/* tables */
 .table-wrap { border:1px solid #edf2f7; border-radius:8px; overflow:hidden; }
 .table-header { padding:12px 14px; border-bottom:1px solid #f1f5f9; background:#fafbfc; font-weight:600; color:#344054; }
 .products-scroll { max-height:300px; overflow:auto; }
@@ -103,29 +129,20 @@ ob_start();
 .qty-box { display:inline-flex; align-items:center; gap:6px; }
 .qbtn { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:6px; cursor:pointer; border:1px solid #e6eef7; background:#f8fafc; user-select:none; }
 .qty-input { width:56px; padding:6px; border:1px solid #e6eef7; border-radius:6px; text-align:center; }
-
-/* summary */
 .summary-list { max-height:240px; overflow:auto; padding-right:8px; }
 .summary-item { display:flex; justify-content:space-between; padding:8px 4px; border-bottom:1px dashed #f1f5f9; color:#1f2937; }
 .summary-totals { margin-top:12px; }
 .bold { font-weight:700; }
 .blue { color:#0b63ff; }
-
-/* other small helpers */
 .search-input { padding:8px 10px; width:30%; border:1px solid #e6eef7; border-radius:8px; margin-bottom:10px; }
 .small-muted { color:#64748b; font-size:13px; }
 .empty-note { color:#7e8796; font-size:14px; text-align:center; padding:20px 0; }
-
-/* responsive */
-@media (max-width:980px) {
-  .create-order-grid { flex-direction:column; }
-  .create-order-right { width:100%; }
-}
+@media (max-width:980px) { .create-order-grid { flex-direction:column; } .create-order-right { width:100%; } }
 </style>
 
-<?php if (!empty($message ?? '')): ?>
+<?php if (!empty($message)): ?>
   <div class="card">
-    <div style="color:#c53030;"><?= htmlspecialchars($message) ?></div>
+    <div style="color:green;"><?= htmlspecialchars($message) ?></div>
   </div>
 <?php endif; ?>
 
@@ -151,40 +168,25 @@ ob_start();
         <h4 style="margin:0">Material</h4>
         <input id="productSearch" class="search-input" placeholder="Search product...">
       </div>
-
       <div class="table-wrap" style="margin-top:12px;">
         <div class="products-scroll">
           <table class="products-table" id="productsTable" aria-describedby="products">
             <thead>
               <tr>
-                <th>Name</th>
-                <th style="width:120px;">Price</th>
-                <th style="width:160px;">Qty</th>
-                <th style="width:120px;">Subtotal</th>
+                <th>Name</th><th style="width:120px;">Price</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th>
               </tr>
             </thead>
             <tbody>
-              <?php if (empty($products)): ?>
+              <?php if(empty($products)): ?>
                 <tr><td colspan="4" class="empty-note">No products found.</td></tr>
-              <?php else: ?>
-                <?php foreach ($products as $p): 
-                  $pid = (int)$p['id'];
-                  $price = number_format((float)$p['price'], 2, '.', '');
-                ?>
+              <?php else: foreach($products as $p): $pid=(int)$p['id']; $price=number_format((float)$p['price'],2,'.',''); ?>
                 <tr data-product-id="<?= $pid ?>">
                   <td class="prod-name"><?= htmlspecialchars($p['name']) ?></td>
                   <td>$<span class="prod-price"><?= $price ?></span></td>
-                  <td>
-                    <div class="qty-box">
-                      <button type="button" class="qbtn minus" aria-label="minus">-</button>
-                      <input type="number" min="0" name="quantity[<?= $pid ?>]" value="0" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>">
-                      <button type="button" class="qbtn plus" aria-label="plus">+</button>
-                    </div>
-                  </td>
+                  <td><div class="qty-box"><button type="button" class="qbtn minus">-</button><input type="number" min="0" name="quantity[<?= $pid ?>]" value="0" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>"><button type="button" class="qbtn plus">+</button></div></td>
                   <td>$<span class="row-subtotal">0.00</span></td>
                 </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
+              <?php endforeach; endif; ?>
             </tbody>
           </table>
         </div>
@@ -197,35 +199,21 @@ ob_start();
         <h4 style="margin:0">Split System Installation</h4>
         <input id="splitSearch" class="search-input" placeholder="Search split...">
       </div>
-
       <div class="table-wrap" style="margin-top:12px;">
         <div class="products-scroll">
           <table class="products-table" id="splitTable">
-            <thead>
-              <tr><th>Name</th><th style="width:120px;">Unit Price</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr>
-            </thead>
+            <thead><tr><th>Name</th><th style="width:120px;">Unit Price</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr></thead>
             <tbody>
-              <?php if (empty($split_installations)): ?>
+              <?php if(empty($split_installations)): ?>
                 <tr><td colspan="4" class="empty-note">No split installations available.</td></tr>
-              <?php else: ?>
-                <?php foreach ($split_installations as $s): 
-                  $sid = (int)$s['id'];
-                  $sprice = number_format((float)$s['price'], 2, '.', '');
-                ?>
+              <?php else: foreach($split_installations as $s): $sid=(int)$s['id']; $sprice=number_format((float)$s['price'],2,'.',''); ?>
                 <tr data-split-id="<?= $sid ?>">
                   <td class="item-name"><?= htmlspecialchars($s['name']) ?></td>
                   <td>$<span class="split-price"><?= $sprice ?></span></td>
-                  <td>
-                    <div class="qty-box">
-                      <button type="button" class="qbtn split-minus">-</button>
-                      <input type="number" min="0" name="split[<?= $sid ?>][qty]" value="0" class="qty-input split-qty" data-price="<?= htmlspecialchars($s['price']) ?>">
-                      <button type="button" class="qbtn split-plus">+</button>
-                    </div>
-                  </td>
+                  <td><div class="qty-box"><button type="button" class="qbtn split-minus">-</button><input type="number" min="0" name="split[<?= $sid ?>][qty]" value="0" class="qty-input split-qty" data-price="<?= htmlspecialchars($s['price']) ?>"><button type="button" class="qbtn split-plus">+</button></div></td>
                   <td>$<span class="row-subtotal">0.00</span></td>
                 </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
+              <?php endforeach; endif; ?>
             </tbody>
           </table>
         </div>
@@ -238,17 +226,11 @@ ob_start();
       <div class="table-wrap" style="margin-top:12px;">
         <div class="products-scroll">
           <table class="products-table" id="ductedTable">
-            <thead>
-              <tr><th>Equipment</th><th>Type</th><th style="width:120px;">Price</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr>
-            </thead>
+            <thead><tr><th>Equipment</th><th>Type</th><th style="width:120px;">Price</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr></thead>
             <tbody>
-              <?php if (empty($ducted_installations)): ?>
+              <?php if(empty($ducted_installations)): ?>
                 <tr><td colspan="5" class="empty-note">No ducted installations available.</td></tr>
-              <?php else: ?>
-                <?php foreach ($ducted_installations as $d): 
-                  $did = (int)$d['id'];
-                  $dprice = number_format((float)$d['price'], 2, '.', '');
-                ?>
+              <?php else: foreach($ducted_installations as $d): $did=(int)$d['id']; $dprice=number_format((float)$d['price'],2,'.',''); ?>
                 <tr data-ducted-id="<?= $did ?>" data-model-indoor="<?= htmlspecialchars($d['model_name_indoor'] ?? '') ?>" data-model-outdoor="<?= htmlspecialchars($d['model_name_outdoor'] ?? '') ?>">
                   <td><?= htmlspecialchars($d['name']) ?></td>
                   <td>
@@ -258,17 +240,10 @@ ob_start();
                     </select>
                   </td>
                   <td>$<span class="ducted-price"><?= $dprice ?></span></td>
-                  <td>
-                    <div class="qty-box">
-                      <button type="button" class="qbtn ducted-minus">-</button>
-                      <input type="number" min="0" name="ducted[<?= $did ?>][qty]" value="0" class="qty-input installation-qty" data-price="<?= htmlspecialchars($d['price']) ?>">
-                      <button type="button" class="qbtn ducted-plus">+</button>
-                    </div>
-                  </td>
+                  <td><div class="qty-box"><button type="button" class="qbtn ducted-minus">-</button><input type="number" min="0" name="ducted[<?= $did ?>][qty]" value="0" class="qty-input installation-qty" data-price="<?= htmlspecialchars($d['price']) ?>"><button type="button" class="qbtn ducted-plus">+</button></div></td>
                   <td>$<span class="row-subtotal">0.00</span></td>
                 </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
+              <?php endforeach; endif; ?>
             </tbody>
           </table>
         </div>
@@ -281,34 +256,21 @@ ob_start();
         <h4 style="margin:0">Personnel</h4>
         <input id="personnelSearch" class="search-input" placeholder="Search personnel...">
       </div>
-
       <div class="table-wrap" style="margin-top:12px;">
         <div class="products-scroll">
           <table class="products-table" id="personnelTable">
-            <thead>
-              <tr><th>Name</th><th style="width:120px;">Rate</th><th style="width:160px;">Hours</th><th style="width:120px;">Subtotal</th></tr>
-            </thead>
+            <thead><tr><th>Name</th><th style="width:120px;">Rate</th><th style="width:160px;">Hours</th><th style="width:120px;">Subtotal</th></tr></thead>
             <tbody>
-              <?php if (empty($personnel)): ?>
+              <?php if(empty($personnel)): ?>
                 <tr><td colspan="4" class="empty-note">No personnel found.</td></tr>
-              <?php else: ?>
-                <?php foreach ($personnel as $pers): 
-                  $prid = (int)$pers['id'];
-                ?>
+              <?php else: foreach($personnel as $pers): $prid=(int)$pers['id']; ?>
                 <tr data-personnel-id="<?= $prid ?>" data-rate="<?= htmlspecialchars($pers['rate']) ?>">
                   <td class="pers-name"><?= htmlspecialchars($pers['name']) ?></td>
                   <td>$<span class="pers-rate"><?= number_format((float)$pers['rate'],2,'.','') ?></span></td>
-                  <td>
-                    <div class="qty-box">
-                      <button type="button" class="qbtn hour-minus">-</button>
-                      <input type="number" min="0" name="personnel_hours[<?= $prid ?>]" value="0" class="qty-input hour-input" data-rate="<?= htmlspecialchars($pers['rate']) ?>">
-                      <button type="button" class="qbtn hour-plus">+</button>
-                    </div>
-                  </td>
+                  <td><div class="qty-box"><button type="button" class="qbtn hour-minus">-</button><input type="number" min="0" name="personnel_hours[<?= $prid ?>]" value="0" class="qty-input hour-input" data-rate="<?= htmlspecialchars($pers['rate']) ?>"><button type="button" class="qbtn hour-plus">+</button></div></td>
                   <td>$<span class="pers-subtotal">0.00</span></td>
                 </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
+              <?php endforeach; endif; ?>
             </tbody>
           </table>
         </div>
@@ -321,274 +283,146 @@ ob_start();
         <h4 style="margin:0">Equipment</h4>
         <input id="equipmentSearch" class="search-input" placeholder="Search equipment...">
       </div>
-
       <div class="table-wrap" style="margin-top:12px;">
         <div class="products-scroll">
           <table class="products-table" id="equipmentTable">
-            <thead>
-              <tr><th>Item</th><th style="width:120px;">Rate</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr>
-            </thead>
+            <thead><tr><th>Item</th><th style="width:120px;">Rate</th><th style="width:160px;">Qty</th><th style="width:120px;">Subtotal</th></tr></thead>
             <tbody>
-              <?php if (empty($equipment)): ?>
+              <?php if(empty($equipment)): ?>
                 <tr><td colspan="4" class="empty-note">No equipment found.</td></tr>
-              <?php else: ?>
-                <?php foreach ($equipment as $eq): $eid=(int)$eq['id']; ?>
-                <tr data-equip-id="<?= $eid ?>" data-rate="<?= htmlspecialchars($eq['rate']) ?>">
-                  <td class="equip-name"><?= htmlspecialchars($eq['name']) ?></td>
-                  <td>$<span class="equip-rate"><?= number_format((float)$eq['rate'],2,'.','') ?></span></td>
-                  <td>
-                    <div class="qty-box">
-                      <button type="button" class="qbtn equip-minus">-</button>
-                      <input type="number" min="0" name="equipment_qty[<?= $eid ?>]" value="0" class="qty-input equip-input">
-                      <button type="button" class="qbtn equip-plus">+</button>
-                    </div>
-                  </td>
-                  <td>$<span class="equip-subtotal">0.00</span></td>
+              <?php else: foreach($equipment as $eq): $eid=(int)$eq['id']; ?>
+                <tr data-equipment-id="<?= $eid ?>">
+                  <td><?= htmlspecialchars($eq['name']) ?></td>
+                  <td>$<span class="eq-rate"><?= number_format((float)$eq['rate'],2,'.','') ?></span></td>
+                  <td><div class="qty-box"><button type="button" class="qbtn eq-minus">-</button><input type="number" min="0" name="equipment_qty[<?= $eid ?>]" value="0" class="qty-input eq-qty" data-rate="<?= htmlspecialchars($eq['rate']) ?>"><button type="button" class="qbtn eq-plus">+</button></div></td>
+                  <td>$<span class="eq-subtotal">0.00</span></td>
                 </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
+              <?php endforeach; endif; ?>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Other Expenses (dynamic rows) -->
+    <!-- Other Expenses -->
     <div class="card">
       <h4>Other Expenses</h4>
-      <div id="otherExpensesContainer"></div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
-        <button type="button" id="addExpenseBtn" class="qbtn" style="padding:8px 12px;">Add</button>
+      <div id="otherExpensesContainer">
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <input type="text" name="other_expenses[name][]" class="input" placeholder="Name">
+          <input type="number" min="0" step="0.01" name="other_expenses[amount][]" class="input" placeholder="Amount">
+        </div>
       </div>
+      <button type="button" id="addOtherExpense" class="qbtn" style="margin-top:6px;">+</button>
     </div>
 
-  </div> <!-- END LEFT COLUMN -->
+  </div>
 
-
-  <!-- RIGHT COLUMN (summary) -->
-  <aside class="create-order-right">
-    <div class="card" style="position:sticky; top:24px;">
+  <!-- RIGHT COLUMN SUMMARY -->
+  <div class="create-order-right">
+    <div class="card">
       <h4>Order Summary</h4>
-
-      <div class="summary-list" id="orderSummary">
-        <div class="empty-note">No items selected.</div>
-      </div>
-
-      <div class="summary-totals">
-        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="small-muted">Subtotal:</span><span>$<span id="subtotalDisplay">0.00</span></span></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="small-muted">Tax (10%):</span><span>$<span id="taxDisplay">0.00</span></span></div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f3f6f9;"><strong class="bold">Grand Total:</strong><strong class="bold blue">$<span id="grandDisplay">0.00</span></strong></div>
-      </div>
-
-      <div style="margin-top:12px;">
-        <button type="submit" class="input" style="background:#0b63ff;color:#fff;border:none;cursor:pointer;border-radius:8px;padding:12px;">Save Order</button>
+      <div class="summary-list" id="summaryList">
+        <div class="summary-item"><span>Total Products</span><span id="totalProducts">$0.00</span></div>
+        <div class="summary-item"><span>Total Split</span><span id="totalSplit">$0.00</span></div>
+        <div class="summary-item"><span>Total Ducted</span><span id="totalDucted">$0.00</span></div>
+        <div class="summary-item"><span>Total Personnel</span><span id="totalPersonnel">$0.00</span></div>
+        <div class="summary-item"><span>Total Equipment</span><span id="totalEquipment">$0.00</span></div>
+        <div class="summary-item"><span>Total Other Expenses</span><span id="totalOther">$0.00</span></div>
+        <div class="summary-totals bold blue">Grand Total: $<span id="grandTotal">0.00</span></div>
       </div>
     </div>
-  </aside>
+    <button type="submit" class="qbtn" style="width:100%; margin-top:12px;">Save Order</button>
+  </div>
 
 </form>
 
-<!-- Vanilla JS: client-side interactions + totals -->
 <script>
-(function(){
-  const GST = 0.10;
-
-  // Helpers
-  function fmt(n){ return Number((n||0).toFixed(2)).toFixed(2); }
-
-  // Update per-row subtotal for a given row element
-  function updateRowSubtotal(row) {
-    const priceEl = row.querySelector('.prod-price, .split-price, .ducted-price, .pers-rate, .equip-rate');
-    let price = 0;
-    if (priceEl) price = parseFloat(priceEl.textContent.replace(/[^0-9.-]+/g,"")) || 0;
-
-    // For personnel rows, rate is on data-rate and hours input uses data-rate instead
-    if (row.dataset.rate) {
-      price = parseFloat(row.dataset.rate) || price;
-    }
-
-    // find input qty or hour
-    const qtyInput = row.querySelector('input.qty-input');
-    let qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : 0;
-
-    // For personnel use hours * rate
-    if (row.querySelector('.hour-input')) {
-      qty = parseFloat(row.querySelector('.hour-input').value) || 0;
-      price = parseFloat(row.dataset.rate) || price;
-    }
-
-    const subtotal = price * qty;
-    const cell = row.querySelector('.row-subtotal, .pers-subtotal, .equip-subtotal');
-    if (cell) cell.textContent = fmt(subtotal);
-    return subtotal;
-  }
-
-  // MAIN TOTAL update
-  function updateTotal() {
-    let subtotal = 0;
-    const summaryParts = [];
-
-    // products
-    document.querySelectorAll('#productsTable tbody tr[data-product-id]').forEach(row => {
-      const price = parseFloat(row.querySelector('input.qty-input').dataset.price) || parseFloat(row.querySelector('.prod-price')?.textContent) || 0;
-      const qty = parseInt(row.querySelector('input.qty-input').value) || 0;
-      const sub = price * qty;
-      row.querySelector('.row-subtotal').textContent = fmt(sub);
-      if (qty > 0) summaryParts.push({name: row.querySelector('.prod-name').textContent.trim(), qty, sub});
-      subtotal += sub;
+// JS to handle qty increment/decrement, subtotal, and summary calculation
+document.querySelectorAll('.qbtn').forEach(btn=>{
+    btn.addEventListener('click',function(){
+        const parent=this.parentElement;
+        const input=parent.querySelector('input');
+        if(!input) return;
+        let val=parseFloat(input.value)||0;
+        if(this.classList.contains('plus') || this.classList.contains('split-plus') || this.classList.contains('ducted-plus') || this.classList.contains('hour-plus') || this.classList.contains('eq-plus')) val+=1;
+        if(this.classList.contains('minus') || this.classList.contains('split-minus') || this.classList.contains('ducted-minus') || this.classList.contains('hour-minus') || this.classList.contains('eq-minus')) val=Math.max(0,val-1);
+        input.value=val;
+        updateSummary();
     });
-
-    // split
-    document.querySelectorAll('#splitTable tbody tr[data-split-id]').forEach(row => {
-      const price = parseFloat(row.querySelector('.split-qty')?.dataset.price) || parseFloat(row.querySelector('.split-price')?.textContent) || 0;
-      const qty = parseInt(row.querySelector('.split-qty').value) || 0;
-      const sub = price * qty;
-      row.querySelector('.row-subtotal').textContent = fmt(sub);
-      if (qty > 0) summaryParts.push({name: row.querySelector('.item-name').textContent.trim(), qty, sub});
-      subtotal += sub;
+});
+document.querySelectorAll('input.qty-input, input.hour-input, input.eq-qty').forEach(input=>{
+    input.addEventListener('input',updateSummary);
+});
+function updateSummary(){
+    let totalProducts=0, totalSplit=0, totalDucted=0, totalPersonnel=0, totalEquipment=0, totalOther=0;
+    // Products
+    document.querySelectorAll('#productsTable tbody tr').forEach(tr=>{
+        const input=tr.querySelector('input');
+        const price=parseFloat(input?.dataset.price)||0;
+        const qty=parseFloat(input?.value)||0;
+        const subtotal=price*qty;
+        tr.querySelector('.row-subtotal').textContent=subtotal.toFixed(2);
+        totalProducts+=subtotal;
     });
-
-    // ducted
-    document.querySelectorAll('#ductedTable tbody tr[data-ducted-id]').forEach(row => {
-      const price = parseFloat(row.querySelector('.installation-qty')?.dataset.price) || parseFloat(row.querySelector('.ducted-price')?.textContent) || 0;
-      const qty = parseInt(row.querySelector('.installation-qty').value) || 0;
-      const type = row.querySelector('.installation-type')?.value || '';
-      const modelIndoor = row.dataset.modelIndoor || row.dataset.modelIndoor;
-      const modelOutdoor = row.dataset.modelOutdoor || row.dataset.modelOutdoor;
-      const model = type === 'outdoor' ? (row.dataset.modelOutdoor || '') : (row.dataset.modelIndoor || '');
-      const label = (model ? model : row.querySelector('td').textContent.trim()) + (type ? ' ('+type+')' : '');
-      const sub = price * qty;
-      row.querySelector('.row-subtotal').textContent = fmt(sub);
-      if (qty > 0) summaryParts.push({name: label, qty, sub});
-      subtotal += sub;
+    // Split
+    document.querySelectorAll('#splitTable tbody tr').forEach(tr=>{
+        const input=tr.querySelector('input');
+        const price=parseFloat(input?.dataset.price)||0;
+        const qty=parseFloat(input?.value)||0;
+        const subtotal=price*qty;
+        tr.querySelector('.row-subtotal').textContent=subtotal.toFixed(2);
+        totalSplit+=subtotal;
     });
-
-    // personnel (hours)
-    document.querySelectorAll('#personnelTable tbody tr[data-personnel-id]').forEach(row => {
-      const rate = parseFloat(row.dataset.rate) || parseFloat(row.querySelector('.pers-rate')?.textContent) || 0;
-      const hours = parseFloat(row.querySelector('.hour-input').value) || 0;
-      const sub = rate * hours;
-      row.querySelector('.pers-subtotal').textContent = fmt(sub);
-      if (hours > 0) summaryParts.push({name: row.querySelector('.pers-name').textContent.trim() + ' ('+hours+' hr)', qty: hours, sub});
-      subtotal += sub;
+    // Ducted
+    document.querySelectorAll('#ductedTable tbody tr').forEach(tr=>{
+        const input=tr.querySelector('input');
+        const price=parseFloat(input?.dataset.price)||0;
+        const qty=parseFloat(input?.value)||0;
+        const subtotal=price*qty;
+        tr.querySelector('.row-subtotal').textContent=subtotal.toFixed(2);
+        totalDucted+=subtotal;
     });
-
-    // equipment
-    document.querySelectorAll('#equipmentTable tbody tr[data-equip-id]').forEach(row => {
-      const rate = parseFloat(row.dataset.rate) || parseFloat(row.querySelector('.equip-rate')?.textContent) || 0;
-      const qty = parseInt(row.querySelector('.equip-input').value) || 0;
-      const sub = rate * qty;
-      row.querySelector('.equip-subtotal').textContent = fmt(sub);
-      if (qty > 0) summaryParts.push({name: row.querySelector('.equip-name').textContent.trim(), qty, sub});
-      subtotal += sub;
+    // Personnel
+    document.querySelectorAll('#personnelTable tbody tr').forEach(tr=>{
+        const input=tr.querySelector('input');
+        const rate=parseFloat(input?.dataset.rate)||0;
+        const hours=parseFloat(input?.value)||0;
+        const subtotal=rate*hours;
+        tr.querySelector('.pers-subtotal').textContent=subtotal.toFixed(2);
+        totalPersonnel+=subtotal;
     });
-
-    // other expenses
-    document.querySelectorAll('.other-expense-row').forEach(row => {
-      const name = row.querySelector('.expense-name').value.trim();
-      const amt = parseFloat(row.querySelector('.expense-amount').value) || 0;
-      if (amt > 0) summaryParts.push({name: name || 'Other expense', qty: 1, sub: amt});
-      subtotal += amt;
+    // Equipment
+    document.querySelectorAll('#equipmentTable tbody tr').forEach(tr=>{
+        const input=tr.querySelector('input');
+        const rate=parseFloat(input?.dataset.rate)||0;
+        const qty=parseFloat(input?.value)||0;
+        const subtotal=rate*qty;
+        tr.querySelector('.eq-subtotal').textContent=subtotal.toFixed(2);
+        totalEquipment+=subtotal;
     });
-
-    // render summary
-    const summaryEl = document.getElementById('orderSummary');
-    if (summaryParts.length === 0) {
-      summaryEl.innerHTML = '<div class="empty-note">No items selected.</div>';
-    } else {
-      summaryEl.innerHTML = '';
-      summaryParts.forEach(it => {
-        const div = document.createElement('div');
-        div.className = 'summary-item';
-        div.innerHTML = '<div>' + escapeHtml(it.name) + (it.qty ? ' x ' + it.qty : '') + '</div><div>$' + fmt(it.sub) + '</div>';
-        summaryEl.appendChild(div);
-      });
-    }
-
-    // totals
-    const tax = subtotal * GST;
-    const grand = subtotal + tax;
-    document.getElementById('subtotalDisplay').textContent = fmt(subtotal);
-    document.getElementById('taxDisplay').textContent = fmt(tax);
-    document.getElementById('grandDisplay').textContent = fmt(grand);
-  }
-
-  // escape helper
-  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
-
-  // Generic plus/minus handlers for many lists
-  function wireQtyButtons(rootSelector, plusSel, minusSel, inputSel) {
-    document.querySelectorAll(rootSelector + ' ' + plusSel).forEach(btn => {
-      btn.addEventListener('click', () => {
-        const row = btn.closest('tr');
-        const input = row.querySelector(inputSel);
-        input.value = Math.max(0, (parseInt(input.value)||0) + 1);
-        updateTotal();
-      });
+    // Other Expenses
+    document.querySelectorAll('#otherExpensesContainer input[name="other_expenses[amount][]"]').forEach(input=>{
+        const amt=parseFloat(input.value)||0;
+        totalOther+=amt;
     });
-    document.querySelectorAll(rootSelector + ' ' + minusSel).forEach(btn => {
-      btn.addEventListener('click', () => {
-        const row = btn.closest('tr');
-        const input = row.querySelector(inputSel);
-        input.value = Math.max(0, (parseInt(input.value)||0) - 1);
-        updateTotal();
-      });
-    });
-    // input changes
-    document.querySelectorAll(rootSelector + ' ' + inputSel).forEach(inp => {
-      inp.addEventListener('input', () => {
-        if (inp.value === '' || isNaN(inp.value)) inp.value = 0;
-        updateTotal();
-      });
-    });
-  }
+    document.getElementById('totalProducts').textContent='$'+totalProducts.toFixed(2);
+    document.getElementById('totalSplit').textContent='$'+totalSplit.toFixed(2);
+    document.getElementById('totalDucted').textContent='$'+totalDucted.toFixed(2);
+    document.getElementById('totalPersonnel').textContent='$'+totalPersonnel.toFixed(2);
+    document.getElementById('totalEquipment').textContent='$'+totalEquipment.toFixed(2);
+    document.getElementById('totalOther').textContent='$'+totalOther.toFixed(2);
+    document.getElementById('grandTotal').textContent=(totalProducts+totalSplit+totalDucted+totalPersonnel+totalEquipment+totalOther).toFixed(2);
+}
 
-  // wire for each table
-  wireQtyButtons('#productsTable', '.plus', '.minus', '.qty-input');
-  wireQtyButtons('#splitTable', '.split-plus', '.split-minus', '.split-qty');
-  wireQtyButtons('#ductedTable', '.ducted-plus', '.ducted-minus', '.installation-qty');
-  wireQtyButtons('#personnelTable', '.hour-plus', '.hour-minus', '.hour-input');
-  wireQtyButtons('#equipmentTable', '.equip-plus', '.equip-minus', '.equip-input');
-
-  // other expenses dynamic rows
-  const otherContainer = document.getElementById('otherExpensesContainer');
-  document.getElementById('addExpenseBtn').addEventListener('click', function(){
-    const row = document.createElement('div');
-    row.className = 'other-expense-row';
-    row.style.display='flex';
-    row.style.gap='8px';
-    row.style.marginBottom='8px';
-    row.innerHTML =
-      '<input type="text" name="other_expenses[][name]" placeholder="Name" class="input expense-name" style="flex:1;padding:8px;">' +
-      '<input type="number" name="other_expenses[][amount]" step="0.01" min="0" placeholder="Amount" class="input expense-amount" style="width:110px;padding:8px;">' +
-      '<button type="button" class="qbtn remove-expense">x</button>';
-    otherContainer.appendChild(row);
-
-    row.querySelector('.expense-amount').addEventListener('input', updateTotal);
-    row.querySelector('.remove-expense').addEventListener('click', function(){ row.remove(); updateTotal(); });
-  });
-
-  // search filters
-  function simpleSearch(inputId, tableId, rowSelector, cellSelector) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    input.addEventListener('input', function(){
-      const q = input.value.trim().toLowerCase();
-      document.querySelectorAll(tableId + ' ' + rowSelector).forEach(row=>{
-        const text = (row.querySelector(cellSelector)?.textContent || '').toLowerCase();
-        row.style.display = text.indexOf(q) === -1 ? 'none' : '';
-      });
-    });
-  }
-  simpleSearch('productSearch','#productsTable','tbody tr','td.prod-name');
-  simpleSearch('splitSearch','#splitTable','tbody tr','td.item-name');
-  simpleSearch('personnelSearch','#personnelTable','tbody tr','td.pers-name');
-  simpleSearch('equipmentSearch','#equipmentTable','tbody tr','td.equip-name');
-
-  // initial update
-  updateTotal();
-
-})();
+// Add other expense row
+document.getElementById('addOtherExpense').addEventListener('click',function(){
+    const container=document.getElementById('otherExpensesContainer');
+    const div=document.createElement('div');
+    div.style.display='flex'; div.style.gap='8px'; div.style.marginBottom='6px';
+    div.innerHTML=`<input type="text" name="other_expenses[name][]" class="input" placeholder="Name"><input type="number" min="0" step="0.01" name="other_expenses[amount][]" class="input" placeholder="Amount">`;
+    container.appendChild(div);
+});
 </script>
 
 <?php
