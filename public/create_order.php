@@ -112,7 +112,7 @@ ob_start();
 .blue { color:#0b63ff; }
 
 /* other small helpers */
-.search-input { padding:8px 10px; width:100%; border:1px solid #e6eef7; border-radius:8px; margin-bottom:10px; }
+.search-input { padding:8px 10px; width:30%; border:1px solid #e6eef7; border-radius:8px; margin-bottom:10px; }
 .small-muted { color:#64748b; font-size:13px; }
 .empty-note { color:#7e8796; font-size:14px; text-align:center; padding:20px 0; }
 
@@ -153,7 +153,6 @@ ob_start();
       </div>
 
       <div class="table-wrap" style="margin-top:12px;">
-        <div class="table-header">Name &nbsp;&nbsp;&nbsp; | &nbsp; Price &nbsp; | &nbsp; Qty &nbsp; | &nbsp; Subtotal</div>
         <div class="products-scroll">
           <table class="products-table" id="productsTable" aria-describedby="products">
             <thead>
