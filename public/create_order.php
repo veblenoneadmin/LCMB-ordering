@@ -14,7 +14,7 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
 
 // Load data for tables
 $products = $pdo->query("SELECT id,name,price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$split_installations = $pdo->query("SELECT id,item_name AS name,unit_price AS price FROM split_system_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$split_installations = $pdo->query("SELECT id,item_name AS name,unit_price AS price FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $ducted_installations = $pdo->query("SELECT id,equipment_name AS name,model_name_indoor,model_name_outdoor,total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $personnel = $pdo->query("SELECT id,name,rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $equipment = $pdo->query("SELECT id,item AS name,rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC);
