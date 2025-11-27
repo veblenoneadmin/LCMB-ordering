@@ -2,7 +2,7 @@
 // create_order.php
 // Drop this file into your project. It expects config.php + layout.php (renderLayout) to exist.
 
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php'; // config.php in root
 require_once __DIR__ . '/layout.php';
 
 // Simple DB sanity check
