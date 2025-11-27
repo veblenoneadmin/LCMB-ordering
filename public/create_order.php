@@ -1,269 +1,280 @@
 <?php
-session_start();
-require_once __DIR__ . '/../config.php'; // Database connection
+// create_order.php
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/layout.php';
 
-// Generate a unique order number
-function generateOrderNumber($pdo) {
+// Fetch data
+try { $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $products=[]; }
+try { $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM `split_installation` ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $split_installations=[]; }
+try { $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $ducted_installations=[]; }
+try { $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $personnel=[]; }
+try { $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $equipment=[]; }
+
+// Generate order number
+function generateOrderNumber($pdo){
     do {
-        $number = 'ORD-' . rand(1000, 9999);
-        $stmt = $pdo->prepare("SELECT id FROM orders WHERE order_number = ?");
-        $stmt->execute([$number]);
-    } while ($stmt->rowCount() > 0);
-    return $number;
+        $num = 'ORD-' . rand(1000,9999);
+        $stmt = $pdo->prepare("SELECT id FROM orders WHERE order_number=?");
+        $stmt->execute([$num]);
+    } while($stmt->rowCount()>0);
+    return $num;
 }
 
-$success = '';
-$error = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle POST
+if($_SERVER['REQUEST_METHOD']==='POST'){
     $customer_name = $_POST['customer_name'] ?? '';
     $customer_email = $_POST['customer_email'] ?? '';
     $contact_number = $_POST['contact_number'] ?? '';
-    $appointment_date = $_POST['appointment_date'] ?? '';
+    $appointment_date = $_POST['appointment_date'] ?? date('Y-m-d');
 
     $order_number = generateOrderNumber($pdo);
     $total_amount = 0;
 
-    // Begin transaction
     $pdo->beginTransaction();
     try {
-        // Insert order
-        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, order_number, total_amount) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$customer_name, $customer_email, $contact_number, $appointment_date, $order_number, 0]);
+        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, order_number, total_amount) VALUES (?,?,?,?,?,0)");
+        $stmt->execute([$customer_name,$customer_email,$contact_number,$appointment_date,$order_number]);
         $order_id = $pdo->lastInsertId();
 
-        // Insert selected products
-        if (!empty($_POST['products'])) {
-            foreach ($_POST['products'] as $product_id => $qty) {
-                $stmtProd = $pdo->prepare("SELECT price FROM products WHERE id = ?");
-                $stmtProd->execute([$product_id]);
-                $price = $stmtProd->fetchColumn();
-                $line_total = $price * $qty;
-                $total_amount += $line_total;
+        // Helper to insert items
+        $insertItem = function($type, $items) use ($pdo, &$total_amount, $order_id){
+            foreach($items as $id => $qty){
+                $id=(int)$id; $qty=(int)$qty;
+                if($qty>0){
+                    if($type==='product'){
+                        $price = $pdo->query("SELECT price FROM products WHERE id=$id")->fetchColumn();
+                    } elseif($type==='split'){
+                        $price = $pdo->query("SELECT unit_price FROM split_installation WHERE id=$id")->fetchColumn();
+                    } elseif($type==='ducted'){
+                        $price = $pdo->query("SELECT total_cost FROM ductedinstallations WHERE id=$id")->fetchColumn();
+                    } elseif($type==='personnel'){
+                        $price = $pdo->query("SELECT rate FROM personnel WHERE id=$id")->fetchColumn();
+                    } elseif($type==='equipment'){
+                        $price = $pdo->query("SELECT rate FROM equipment WHERE id=$id")->fetchColumn();
+                    } else { $price=0; }
 
-                $stmtInsert = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, qty, price) VALUES (?, 'product', ?, ?, ?)");
-                $stmtInsert->execute([$order_id, $product_id, $qty, $price]);
+                    $line_total = $price*$qty;
+                    $total_amount+=$line_total;
+
+                    $stmtIns = $pdo->prepare("INSERT INTO order_items (order_id,item_type,item_id,qty,price) VALUES (?,?,?,?,?)");
+                    $stmtIns->execute([$order_id, $type==='split'||$type==='ducted' ? 'installation' : $type, $id, $qty, $price]);
+                }
+            }
+        };
+
+        $insertItem('product', $_POST['products'] ?? []);
+        $insertItem('split', $_POST['split_installation'] ?? []);
+        $insertItem('ducted', $_POST['ducted'] ?? []);
+        $insertItem('personnel', $_POST['personnel'] ?? []);
+        $insertItem('equipment', $_POST['equipment'] ?? []);
+
+        // Other expenses
+        if(!empty($_POST['other_expenses'])){
+            foreach($_POST['other_expenses'] as $exp){
+                $name = $exp['name'] ?? ''; $amount = (float)($exp['amount'] ?? 0);
+                if($name && $amount>0){
+                    $total_amount+=$amount;
+                    $stmtExp = $pdo->prepare("INSERT INTO order_items (order_id,item_type,item_id,qty,price) VALUES (?,?,?,?,?)");
+                    $stmtExp->execute([$order_id,'expense',0,1,$amount]);
+                }
             }
         }
 
-        // Insert selected personnel
-        if (!empty($_POST['personnel'])) {
-            foreach ($_POST['personnel'] as $person_id => $qty) {
-                $stmtPers = $pdo->prepare("SELECT rate FROM personnel WHERE id = ?");
-                $stmtPers->execute([$person_id]);
-                $price = $stmtPers->fetchColumn();
-                $line_total = $price * $qty;
-                $total_amount += $line_total;
-
-                $stmtInsert = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, qty, price) VALUES (?, 'personnel', ?, ?, ?)");
-                $stmtInsert->execute([$order_id, $person_id, $qty, $price]);
-            }
-        }
-
-        // Insert selected split installations
-        if (!empty($_POST['split_installation'])) {
-            foreach ($_POST['split_installation'] as $install_id => $qty) {
-                $stmtInst = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id = ?");
-                $stmtInst->execute([$install_id]);
-                $price = $stmtInst->fetchColumn();
-                $line_total = $price * $qty;
-                $total_amount += $line_total;
-
-                $stmtInsert = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, qty, price) VALUES (?, 'installation', ?, ?, ?)");
-                $stmtInsert->execute([$order_id, $install_id, $qty, $price]);
-            }
-        }
-
-        // Insert selected ducted installations
-        if (!empty($_POST['ductedinstallations'])) {
-            foreach ($_POST['ductedinstallations'] as $duct_id => $qty) {
-                $stmtDuct = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id = ?");
-                $stmtDuct->execute([$duct_id]);
-                $price = $stmtDuct->fetchColumn();
-                $line_total = $price * $qty;
-                $total_amount += $line_total;
-
-                $stmtInsert = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, qty, price) VALUES (?, 'installation', ?, ?, ?)");
-                $stmtInsert->execute([$order_id, $duct_id, $qty, $price]);
-            }
-        }
-
-        // Insert selected equipment
-        if (!empty($_POST['equipment'])) {
-            foreach ($_POST['equipment'] as $equip_id => $qty) {
-                $stmtEquip = $pdo->prepare("SELECT rate FROM equipment WHERE id = ?");
-                $stmtEquip->execute([$equip_id]);
-                $price = $stmtEquip->fetchColumn();
-                $line_total = $price * $qty;
-                $total_amount += $line_total;
-
-                $stmtInsert = $pdo->prepare("INSERT INTO order_items (order_id, item_type, item_id, qty, price) VALUES (?, 'personnel', ?, ?, ?)");
-                $stmtInsert->execute([$order_id, $equip_id, $qty, $price]);
-            }
-        }
-
-        // Update order with total_amount
-        $stmtUpdate = $pdo->prepare("UPDATE orders SET total_amount = ? WHERE id = ?");
-        $stmtUpdate->execute([$total_amount, $order_id]);
+        // Update total
+        $stmtUpd = $pdo->prepare("UPDATE orders SET total_amount=? WHERE id=?");
+        $stmtUpd->execute([$total_amount,$order_id]);
 
         $pdo->commit();
-        $success = "Order created successfully!";
-    } catch (Exception $e) {
+        echo "<script>alert('Order saved successfully!');window.location='create_order.php';</script>";
+        exit;
+    } catch(Exception $e){
         $pdo->rollBack();
-        $error = "Error saving order: " . $e->getMessage();
+        echo "<script>alert('Error saving order: ".addslashes($e->getMessage())."');</script>";
     }
 }
 
-// Fetch tables for display
-$products = $pdo->query("SELECT * FROM products")->fetchAll(PDO::FETCH_ASSOC);
-$personnel = $pdo->query("SELECT * FROM personnel")->fetchAll(PDO::FETCH_ASSOC);
-$split_installation = $pdo->query("SELECT * FROM split_installation")->fetchAll(PDO::FETCH_ASSOC);
-$ductedinstallations = $pdo->query("SELECT * FROM ductedinstallations")->fetchAll(PDO::FETCH_ASSOC);
-$equipment = $pdo->query("SELECT * FROM equipment")->fetchAll(PDO::FETCH_ASSOC);
-
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Create Order</title>
-    <link href="assets/css/material-dashboard.css" rel="stylesheet">
-</head>
-<body class="g-sidenav-show bg-gray-200">
-<?php include 'sidebar.php'; ?>
-<main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-<?php include 'topbar.php'; ?>
 
-<div class="container-fluid py-4">
-    <?php if ($success): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-    <?php elseif ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+<!-- MAIN GRID -->
+<form method="post" class="create-order-grid" id="orderForm" novalidate>
 
-    <form method="POST">
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6>Customer Information</h6>
-                    </div>
-                    <div class="card-body">
-                        <input class="form-control mb-2" name="customer_name" placeholder="Customer Name" required>
-                        <input class="form-control mb-2" name="customer_email" placeholder="Customer Email">
-                        <input class="form-control mb-2" name="contact_number" placeholder="Contact Number">
-                        <input type="date" class="form-control mb-2" name="appointment_date">
-                    </div>
+  <!-- LEFT PANEL -->
+  <div class="create-order-left">
+
+    <!-- Client Info -->
+    <div class="card">
+      <h4>Client Information</h4>
+      <div class="client-grid">
+        <input type="text" name="customer_name" class="input" placeholder="Name" required>
+        <input type="email" name="customer_email" class="input" placeholder="Email">
+        <input type="text" name="contact_number" class="input" placeholder="Phone">
+        <input type="date" name="appointment_date" class="input" value="<?= date('Y-m-d') ?>">
+      </div>
+    </div>
+
+    <!-- PRODUCTS TABLE -->
+    <div class="card">
+      <h4>Material</h4>
+      <input id="productSearch" class="search-input" placeholder="Search products...">
+      <div class="table-wrap">
+        <table class="products-table" id="productsTable">
+          <thead>
+            <tr><th>Name</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr>
+          </thead>
+          <tbody>
+          <?php foreach($products as $p): 
+            $pid = (int)$p['id'];
+            $price = number_format((float)$p['price'],2,'.',''); ?>
+            <tr data-product-id="<?= $pid ?>">
+              <td><?= htmlspecialchars($p['name']) ?></td>
+              <td>$<span class="prod-price"><?= $price ?></span></td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qbtn minus">-</button>
+                  <input type="number" min="0" value="0" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>" name="products[<?= $pid ?>]">
+                  <button type="button" class="qbtn plus">+</button>
                 </div>
+              </td>
+              <td>$<span class="row-subtotal">0.00</span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <!-- Products Table -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6>Products</h6>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr><th>Select</th><th>Name</th><th>Price</th><th>Qty</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($products as $p): ?>
-                                    <tr>
-                                        <td><input type="checkbox" name="products[<?= $p['id'] ?>]"></td>
-                                        <td><?= htmlspecialchars($p['name']) ?></td>
-                                        <td><?= number_format($p['price'],2) ?></td>
-                                        <td><input type="number" name="products[<?= $p['id'] ?>]" value="1" min="1" class="form-control"></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- SPLIT INSTALLATIONS -->
+    <div class="card">
+      <h4>Split System Installation</h4>
+      <input id="splitSearch" class="search-input" placeholder="Search split systems...">
+      <div class="table-wrap">
+        <table class="products-table" id="splitTable">
+          <thead>
+            <tr><th>Name</th><th>Unit Price</th><th>Qty</th><th>Subtotal</th></tr>
+          </thead>
+          <tbody>
+          <?php foreach($split_installations as $s):
+            $sid=(int)$s['id']; $sprice=number_format((float)$s['price'],2,'.',''); ?>
+            <tr data-split-id="<?= $sid ?>">
+              <td><?= htmlspecialchars($s['name']) ?></td>
+              <td>$<span class="split-price"><?= $sprice ?></span></td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qbtn split-minus">-</button>
+                  <input type="number" min="0" value="0" class="qty-input split-qty" data-price="<?= htmlspecialchars($s['price']) ?>" name="split_installation[<?= $sid ?>]">
+                  <button type="button" class="qbtn split-plus">+</button>
                 </div>
+              </td>
+              <td>$<span class="row-subtotal">0.00</span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <!-- Repeat similar tables for personnel, split_installation, ductedinstallations, equipment -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6>Personnel</h6>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead><tr><th>Select</th><th>Name</th><th>Role</th><th>Rate</th><th>Qty</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($personnel as $per): ?>
-                                    <tr>
-                                        <td><input type="checkbox" name="personnel[<?= $per['id'] ?>]"></td>
-                                        <td><?= htmlspecialchars($per['name']) ?></td>
-                                        <td><?= htmlspecialchars($per['role']) ?></td>
-                                        <td><?= number_format($per['rate'],2) ?></td>
-                                        <td><input type="number" name="personnel[<?= $per['id'] ?>]" value="1" min="1" class="form-control"></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- DUCTED INSTALLATIONS -->
+    <div class="card">
+      <h4>Ducted Installation</h4>
+      <div class="table-wrap">
+        <table class="products-table" id="ductedTable">
+          <thead>
+            <tr><th>Equipment</th><th>Type</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr>
+          </thead>
+          <tbody>
+          <?php foreach($ducted_installations as $d):
+            $did=(int)$d['id']; $dprice=number_format((float)$d['price'],2,'.',''); ?>
+            <tr data-ducted-id="<?= $did ?>" data-model-indoor="<?= htmlspecialchars($d['model_name_indoor']) ?>" data-model-outdoor="<?= htmlspecialchars($d['model_name_outdoor']) ?>">
+              <td><?= htmlspecialchars($d['name']) ?></td>
+              <td>
+                <select class="installation-type input" name="ducted[<?= $did ?>][type]">
+                  <option value="indoor">Indoor</option>
+                  <option value="outdoor">Outdoor</option>
+                </select>
+              </td>
+              <td>$<span class="ducted-price"><?= $dprice ?></span></td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qbtn ducted-minus">-</button>
+                  <input type="number" min="0" value="0" class="qty-input installation-qty" data-price="<?= htmlspecialchars($d['price']) ?>" name="ducted[<?= $did ?>][qty]">
+                  <button type="button" class="qbtn ducted-plus">+</button>
                 </div>
+              </td>
+              <td>$<span class="row-subtotal">0.00</span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <div class="card mb-4">
-                    <div class="card-header"><h6>Split Installation</h6></div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead><tr><th>Select</th><th>Item</th><th>Unit Price</th><th>Qty</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($split_installation as $si): ?>
-                                    <tr>
-                                        <td><input type="checkbox" name="split_installation[<?= $si['id'] ?>]"></td>
-                                        <td><?= htmlspecialchars($si['item_name']) ?></td>
-                                        <td><?= number_format($si['unit_price'],2) ?></td>
-                                        <td><input type="number" name="split_installation[<?= $si['id'] ?>]" value="1" min="1" class="form-control"></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- PERSONNEL -->
+    <div class="card">
+      <h4>Personnel</h4>
+      <input id="personnelSearch" class="search-input" placeholder="Search personnel...">
+      <div class="table-wrap">
+        <table class="products-table" id="personnelTable">
+          <thead><tr><th>Name</th><th>Rate</th><th>Hours</th><th>Subtotal</th></tr></thead>
+          <tbody>
+          <?php foreach($personnel as $pers):
+            $prid=(int)$pers['id']; ?>
+            <tr data-personnel-id="<?= $prid ?>" data-rate="<?= htmlspecialchars($pers['rate']) ?>">
+              <td><?= htmlspecialchars($pers['name']) ?></td>
+              <td>$<span class="pers-rate"><?= number_format((float)$pers['rate'],2,'.','') ?></span></td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qbtn hour-minus">-</button>
+                  <input type="number" min="0" value="0" class="qty-input hour-input" data-rate="<?= htmlspecialchars($pers['rate']) ?>" name="personnel[<?= $prid ?>]">
+                  <button type="button" class="qbtn hour-plus">+</button>
                 </div>
+              </td>
+              <td>$<span class="pers-subtotal">0.00</span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <div class="card mb-4">
-                    <div class="card-header"><h6>Ducted Installations</h6></div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead><tr><th>Select</th><th>Equipment</th><th>Total Cost</th><th>Qty</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($ductedinstallations as $di): ?>
-                                    <tr>
-                                        <td><input type="checkbox" name="ductedinstallations[<?= $di['id'] ?>]"></td>
-                                        <td><?= htmlspecialchars($di['equipment_name']) ?></td>
-                                        <td><?= number_format($di['total_cost'],2) ?></td>
-                                        <td><input type="number" name="ductedinstallations[<?= $di['id'] ?>]" value="1" min="1" class="form-control"></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+    <!-- EQUIPMENT -->
+    <div class="card">
+      <h4>Equipment</h4>
+      <input id="equipmentSearch" class="search-input" placeholder="Search equipment...">
+      <div class="table-wrap">
+        <table class="products-table" id="equipmentTable">
+          <thead><tr><th>Item</th><th>Rate</th><th>Qty</th><th>Subtotal</th></tr></thead>
+          <tbody>
+          <?php foreach($equipment as $eq):
+            $eid=(int)$eq['id']; ?>
+            <tr data-equip-id="<?= $eid ?>" data-rate="<?= htmlspecialchars($eq['rate']) ?>">
+              <td><?= htmlspecialchars($eq['name']) ?></td>
+              <td>$<span class="equip-rate"><?= number_format((float)$eq['rate'],2,'.','') ?></span></td>
+              <td>
+                <div class="qty-box">
+                  <button type="button" class="qbtn equip-minus">-</button>
+                  <input type="number" min="0" value="0" class="qty-input equip-input" name="equipment[<?= $eid ?>]">
+                  <button type="button" class="qbtn equip-plus">+</button>
                 </div>
+              </td>
+              <td>$<span class="equip-subtotal">0.00</span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-                <div class="card mb-4">
-                    <div class="card-header"><h6>Equipment</h6></div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead><tr><th>Select</th><th>Item</th><th>Rate</th><th>Qty</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($equipment as $eq): ?>
-                                    <tr>
-                                        <td><input type="checkbox" name="equipment[<?= $eq['id'] ?>]"></td>
-                                        <td><?= htmlspecialchars($eq['item']) ?></td>
-                                        <td><?= number_format($eq['rate'],2) ?></td>
-                                        <td><input type="number" name="equipment[<?= $eq['id'] ?>]" value="1" min="1" class="form-control"></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <!-- OTHER EXPENSES -->
+    <div class="card">
+      <h4>Other Expenses</h4>
+      <div id="otherExpensesContainer"></div>
+      <button type="button" class="qbtn" id="addExpenseBtn">Add</button>
+    </div>
 
-                <button class="btn btn-primary mb-4" type="submit">Create Order</button>
-            </div>
+  </div> <!-- END LEFT PANEL -->
 
-            <!-- RIGHT PANEL (SUMMARY) -->
+  <!-- RIGHT PANEL (SUMMARY) -->
   <aside class="create-order-right">
     <div class="card card-summary">
       <h4 class="card-title">Order Summary</h4>
@@ -276,10 +287,69 @@ $equipment = $pdo->query("SELECT * FROM equipment")->fetchAll(PDO::FETCH_ASSOC);
       <button type="submit" class="input">Save Order</button>
     </div>
   </aside>
-    </form>
-</div>
-</main>
-<?php include 'footer.php'; ?>
-<script src="assets/js/material-dashboard.min.js"></script>
-</body>
-</html>
+
+</form>
+
+<!-- Minimal CSS for summary -->
+<style>
+.create-order-grid{display:flex;gap:20px;}
+.create-order-left{flex:1;}
+.create-order-right{width:320px;}
+.summary-list{max-height:300px;overflow:auto;}
+.summary-item{display:flex;justify-content:space-between;padding:4px 0;}
+.empty-note{color:#7e8796;font-size:13px;text-align:center;padding:12px 0;}
+</style>
+
+<!-- JS for live summary -->
+<script>
+(function(){
+  function fmt(n){ return Number(n||0).toFixed(2); }
+  function updateSummary(){
+    let subtotal=0;
+    const summaryEl=document.getElementById('orderSummary');
+    summaryEl.innerHTML='';
+
+    const allRows = document.querySelectorAll('input.qty-input');
+    allRows.forEach(input=>{
+      const row=input.closest('tr');
+      const val=parseFloat(input.value)||0;
+      if(val>0){
+        let name=row.querySelector('td')?.textContent||'';
+        let price=parseFloat(input.dataset.price)||parseFloat(row.dataset.rate)||0;
+        if(row.querySelector('.hour-input')) name+=` (${val} hr)`;
+        subtotal+=price*val;
+        const div=document.createElement('div');
+        div.className='summary-item';
+        div.innerHTML=`<span>${name} x ${val}</span><span>$${fmt(price*val)}</span>`;
+        summaryEl.appendChild(div);
+      }
+    });
+
+    // Other expenses
+    const expenseRows=document.querySelectorAll('#otherExpensesContainer .other-expense-row');
+    expenseRows.forEach(row=>{
+      const name=row.querySelector('.expense-name')?.value||'';
+      const val=parseFloat(row.querySelector('.expense-amount')?.value||0);
+      if(val>0){
+        subtotal+=val;
+        const div=document.createElement('div');
+        div.className='summary-item';
+        div.innerHTML=`<span>${name}</span><span>$${fmt(val)}</span>`;
+        summaryEl.appendChild(div);
+      }
+    });
+
+    if(subtotal===0) summaryEl.innerHTML='<div class="empty-note">No items selected.</div>';
+    document.getElementById('subtotalDisplay').textContent=fmt(subtotal);
+    document.getElementById('taxDisplay').textContent=fmt(subtotal*0.1);
+    document.getElementById('grandDisplay').textContent=fmt(subtotal*1.1);
+  }
+
+  document.querySelectorAll('input.qty-input').forEach(input=>{
+    input.addEventListener('input',updateSummary);
+    const row=input.closest('tr');
+    row.querySelectorAll('.qbtn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        let val=parseInt(input.value)||0;
+        if(btn.classList.contains('plus')||btn.classList.contains('split-plus')||btn.classList.contains('ducted-plus')||btn.classList.contains('hour-plus')||btn.classList.contains('equip-plus')) val++;
+        if(btn.classList.contains('minus')||btn.classList.contains('split-minus')||btn.classList.contains('ducted-minus')||btn.classList.contains('hour-minus')||btn.classList.contains('equip-minus')) val=Math
