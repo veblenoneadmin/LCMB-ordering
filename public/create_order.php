@@ -318,22 +318,26 @@ ob_start();
 
   </div>
 
-  <!-- RIGHT COLUMN SUMMARY -->
-  <div class="create-order-right">
-    <div class="card">
+  <!-- RIGHT COLUMN (summary) -->
+  <aside class="create-order-right">
+    <div class="card" style="position:sticky; top:24px;">
       <h4>Order Summary</h4>
-      <div class="summary-list" id="summaryList">
-        <div class="summary-item"><span>Total Products</span><span id="totalProducts">$0.00</span></div>
-        <div class="summary-item"><span>Total Split</span><span id="totalSplit">$0.00</span></div>
-        <div class="summary-item"><span>Total Ducted</span><span id="totalDucted">$0.00</span></div>
-        <div class="summary-item"><span>Total Personnel</span><span id="totalPersonnel">$0.00</span></div>
-        <div class="summary-item"><span>Total Equipment</span><span id="totalEquipment">$0.00</span></div>
-        <div class="summary-item"><span>Total Other Expenses</span><span id="totalOther">$0.00</span></div>
-        <div class="summary-totals bold blue">Grand Total: $<span id="grandTotal">0.00</span></div>
+
+      <div class="summary-list" id="orderSummary">
+        <div class="empty-note">No items selected.</div>
+      </div>
+
+      <div class="summary-totals">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="small-muted">Subtotal:</span><span>$<span id="subtotalDisplay">0.00</span></span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="small-muted">Tax (10%):</span><span>$<span id="taxDisplay">0.00</span></span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #f3f6f9;"><strong class="bold">Grand Total:</strong><strong class="bold blue">$<span id="grandDisplay">0.00</span></strong></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button type="submit" class="input" style="background:#0b63ff;color:#fff;border:none;cursor:pointer;border-radius:8px;padding:12px;">Save Order</button>
       </div>
     </div>
-    <button type="submit" class="qbtn" style="width:100%; margin-top:12px;">Save Order</button>
-  </div>
+  </aside>
 
 </form>
 
