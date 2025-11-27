@@ -120,7 +120,7 @@ ob_start();
 <?php endif; ?>
 
 <form method="post" class="create-order-grid" id="orderForm" novalidate>
-    <div class="create-order-left">
+    <div class="flex-1 flex flex-col gap-6">
         <!-- Client Info -->
         <div class="bg-white p-3 rounded-xl shadow shadow border border-gray-200">
             <h5 class="text-lg font-medium text-gray-700 mb-3">Client Information</h5>
@@ -284,22 +284,67 @@ ob_start();
         </div>
     </div>
 
-    <!-- RIGHT PANEL -->
-    <aside class="create-order-right">
-        <div class="card card-summary">
-            <h4 class="card-title">Order Summary</h4>
-            <div class="summary-list" id="orderSummary"><div class="empty-note">No items selected.</div></div>
-            <div class="summary-totals">
-                <div class="flex justify-between"><span>Subtotal:</span><span>$<span id="subtotalDisplay">0.00</span></span></div>
-                <div class="flex justify-between"><span>Tax (10%):</span><span>$<span id="taxDisplay">0.00</span></span></div>
-                <div class="flex justify-between border-t"><strong>Grand Total:</strong><strong>$<span id="grandDisplay">0.00</span></strong></div>
-            </div>
-            <button type="submit" class="input">Save Order</button>
+    <!-- RIGHT PANEL WRAPPER -->
+<div class="w-80 flex flex-col gap-4">
+
+    <!-- PROFIT CARD -->
+    <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Profit:</span>
+            <span>$<span id="profitDisplay">0.00</span></span>
         </div>
-    </aside>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Percent Margin:</span>
+            <span><span id="profitMarginDisplay">0.00</span>%</span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Net Profit:</span>
+            <span><span id="netProfitDisplay">0.00</span>%</span>
+        </div>
+
+        <div class="flex justify-between font-semibold text-gray-700">
+            <span>Total Profit:</span>
+            <span>$<span id="totalProfitDisplay">0.00</span></span>
+        </div>
+    </div>
+
+    <!-- SUMMARY CARD -->
+    <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
+
+    <!-- ITEM LIST -->
+        <div id="orderSummary" class="flex-1 overflow-y-auto mb-4">
+            <span style="color:#777;">No items selected.</span>
+        </div>
+        <!-- TOTALS -->
+        <hr class="mb-3">
+
+        <p class="text-base font-medium text-gray-600 flex justify-between mb-1">
+            <span>Subtotal:</span>
+            <span>$<span id="subtotalDisplay">0.00</span></span>
+        </p>
+
+        <p class="text-base font-medium text-gray-600 flex justify-between mb-1">
+            <span>Tax:</span>
+            <span>$<span id="taxDisplay">0.00</span></span>
+        </p>
+
+        <p class="text-xl font-semibold flex justify-between text-blue-700 mb-4">
+            <span>Grand Total:</span>
+            <span>$<span id="grandDisplay">0.00</span></span>
+        </p>
+
+        <button type="submit" class= "w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 text-lg">
+            Save Order
+        </button>
+    </div>
+
+</div>
+  </div>
 </form>
-
-
 
 <script>
 (function(){
