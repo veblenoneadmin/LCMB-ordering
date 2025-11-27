@@ -93,16 +93,7 @@ ob_start();
 .client-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .input { width:100%; padding:10px 12px; border:1px solid #dfe6ef; border-radius:6px; font-size:14px; }
 
-/* tables */
-.table-wrap { border:1px solid #edf2f7; border-radius:8px; overflow:hidden; }
-.table-header { padding:12px 14px; border-bottom:1px solid #f1f5f9; background:#fafbfc; font-weight:600; color:#344054; }
-.products-scroll { max-height:300px; overflow:auto; }
-.products-table { width:100%; border-collapse:collapse; font-size:14px; }
-.products-table th, .products-table td { padding:10px 12px; border-bottom:1px solid #f5f7fb; text-align:center; }
-.products-table th:first-child, .products-table td:first-child { text-align:left; }
-.qty-box { display:inline-flex; align-items:center; gap:6px; }
-.qbtn { display:inline-block; width:28px; height:28px; line-height:28px; text-align:center; border-radius:6px; cursor:pointer; border:1px solid #e6eef7; background:#f8fafc; user-select:none; }
-.qty-input { width:56px; padding:6px; border:1px solid #e6eef7; border-radius:6px; text-align:center; }
+
 
 /* summary */
 .summary-list { max-height:240px; overflow:auto; padding-right:8px; }
