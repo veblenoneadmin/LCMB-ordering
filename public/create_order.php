@@ -27,6 +27,10 @@ $message = '';
 // POST Handling: save to DB
 // =====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+     // Initialize total to 0 to prevent NULL
+    $total = 0;
+    
     try {
         $pdo->beginTransaction();
 
