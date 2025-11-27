@@ -30,29 +30,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, created_at) VALUES (?,?,?,?,NOW())");
+        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, total_amount, created_at) VALUES (?,?,?,?,?,NOW())");
         $stmt->execute([
             $_POST['customer_name'] ?? '',
             $_POST['customer_email'] ?? '',
             $_POST['contact_number'] ?? '',
             $_POST['appointment_date'] ?? date('Y-m-d'),
+            $total
         ]);
         $orderId = $pdo->lastInsertId();
 
         // Helper to insert items
         $insertItem = $pdo->prepare("INSERT INTO order_items (order_id,item_type,item_id,item_name,qty,price,type) VALUES (?,?,?,?,?,?,?)");
 
-        // Products
+        // Calculate total first (sum all items)
+        $total = 0;
+
+       // Products
         if(!empty($_POST['quantity'])){
             foreach($_POST['quantity'] as $pid=>$qty){
-                $qty=(int)$qty;
-                if($qty>0){
-                    $row = $pdo->query("SELECT name, price FROM products WHERE id=".(int)$pid)->fetch(PDO::FETCH_ASSOC);
-                    $insertItem->execute([$orderId,'product',$pid,$row['name'],$qty,$row['price'],null]);
-                }
-            }
+                $qty = (int)$qty;
+        if($qty>0){
+                $row = $pdo->query("SELECT price FROM products WHERE id=".(int)$pid)->fetch(PDO::FETCH_ASSOC);
+                $total += $row['price'] * $qty;
         }
-
+    }
+}
         // Split installations
         if(!empty($_POST['split'])){
             foreach($_POST['split'] as $sid=>$data){
