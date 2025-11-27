@@ -217,15 +217,7 @@ ob_start();
   </aside>
 
 </form>
-<!-- Minimal CSS for summary -->
-<style>
-.create-order-grid{display:flex;gap:20px;}
-.create-order-left{flex:1;}
-.create-order-right{width:320px;}
-.summary-list{max-height:300px;overflow:auto;}
-.summary-item{display:flex;justify-content:space-between;padding:4px 0;}
-.empty-note{color:#7e8796;font-size:13px;text-align:center;padding:12px 0;}
-</style>
+
 <script>
 (function(){
   function fmt(n){ return Number(n||0).toFixed(2); }
