@@ -352,4 +352,31 @@ ob_start();
       btn.addEventListener('click',()=>{
         let val=parseInt(input.value)||0;
         if(btn.classList.contains('plus')||btn.classList.contains('split-plus')||btn.classList.contains('ducted-plus')||btn.classList.contains('hour-plus')||btn.classList.contains('equip-plus')) val++;
-        if(btn.classList.contains('minus')||btn.classList.contains('split-minus')||btn.classList.contains('ducted-minus')||btn.classList.contains('hour-minus')||btn.classList.contains('equip-minus')) val=Math
+        if(btn.classList.contains('minus')||btn.classList.contains('split-minus')||btn.classList.contains('ducted-minus')||btn.classList.contains('hour-minus')||btn.classList.contains('equip-minus')) val=Math.max(0,val-1);
+        input.value=val;
+        updateSummary();
+      });
+    });
+  });
+
+  // Other Expenses
+  document.getElementById('addExpenseBtn').addEventListener('click',function(){
+    const row=document.createElement('div');
+    row.className='other-expense-row';
+    row.style.display='flex'; row.style.gap='8px'; row.style.marginBottom='8px';
+    row.innerHTML='<input type="text" placeholder="Name" class="input expense-name" style="flex:1;">'+
+                  '<input type="number" placeholder="Amount" class="input expense-amount" style="width:110px;">'+
+                  '<button type="button" class="qbtn remove-expense">x</button>';
+    document.getElementById('otherExpensesContainer').appendChild(row);
+    row.querySelector('.expense-amount').addEventListener('input',updateSummary);
+    row.querySelector('.remove-expense').addEventListener('click',()=>{ row.remove(); updateSummary(); });
+  });
+
+  updateSummary();
+})();
+</script>
+
+<?php
+$content = ob_get_clean();
+renderLayout('Create Order',$content,'create_order');
+?>
