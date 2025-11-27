@@ -133,25 +133,29 @@ ob_start();
         </div>
 
         <!-- PRODUCTS TABLE -->
-        <div class="card">
-            <h4>Material</h4>
-            <input id="productSearch" class="search-input" placeholder="Search products...">
-            <div class="table-wrap">
-                <table class="products-table">
-                    <thead><tr><th>Name</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
-                    <tbody>
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+          <span class="font-medium text-gray-700">Material</span>
+            <input id="productSearch" class="search-input" placeholder="Search products..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
+            </div>
+            <div class="overflow-y-auto max-h-64 border rounded-lg">
+                <table class="products-table" class="w-full border-collapse text-sm">
+                     <thead class="bg-gray-100 sticky top-0">
+              <tr><th class="p-2 text-left">Name</th><th class="p-2 text-center">Price</th><th class="p-2 text-center">Qty</th><th class="p-2 text-center">Subtotal</th></tr>
+            </thead>
+            <tbody>
                     <?php foreach($products as $p): $pid=(int)$p['id']; ?>
-                        <tr>
-                            <td><?= htmlspecialchars($p['name']) ?></td>
-                            <td>$<span class="prod-price"><?= number_format($p['price'],2) ?></span></td>
-                            <td>
-                                <div class="qty-box">
-                                    <button type="button" class="qbtn minus">-</button>
+                        <tr class="border-b">
+                            <td class="product-name p-2"><?= htmlspecialchars($p['name']) ?></td>
+                            <td class="p-2 text-center">$<span class="prod-price"><?= number_format($p['price'],2) ?></span></td>
+                            <td class="p-2 text-center">
+                                <div class="inline-flex items-center space-x-2">
+                                    <button type="button" class="px-2 py-1 bg-gray-200 rounded minus-btn">-</button>
                                     <input type="number" min="0" value="0" name="product[<?= $pid ?>]" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>">
-                                    <button type="button" class="qbtn plus">+</button>
+                                    <button type="button" class="px-2 py-1 bg-gray-200 rounded plus-btn">+</button>
                                 </div>
                             </td>
-                            <td>$<span class="row-subtotal">0.00</span></td>
+                            <td class="subtotal p-2 text-center">$<span class="row-subtotal">0.00</span></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
