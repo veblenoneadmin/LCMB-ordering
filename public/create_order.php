@@ -271,7 +271,9 @@ ob_start();
         <div class="flex items-center justify-between mb-3">
         <span class="font-medium text-gray-700">Equipment</span>
             <input id="equipmentSearch" class="search-input" placeholder="Search equipment...">
-            <div class="table-wrap">
+        </div>
+         
+            <div class="overflow-y-auto max-h-64 border rounded-lg">
                 <table class="products-table">
                     <thead><tr><th>Item</th><th>Rate</th><th>Qty</th><th>Subtotal</th></tr></thead>
                     <tbody>
@@ -297,7 +299,8 @@ ob_start();
         <!-- OTHER EXPENSES -->
         <div class="bg-white p-4 rounded-xl shadow flex flex-col mb-4">
         <span class="font-medium text-gray-700 mb-2">Other Expenses</span>
-            <h4>Other Expenses</h4>
+
+            <!-- Wrapper for dynamic inputs -->
             <div id="otherExpensesContainer"></div>
             <button type="button" class="qbtn" id="addExpenseBtn">Add</button>
         </div>
