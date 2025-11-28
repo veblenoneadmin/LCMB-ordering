@@ -164,11 +164,14 @@ ob_start();
         </div>
 
         <!-- SPLIT INSTALLATION -->
-        <div class="card">
-            <h4>Split System Installation</h4>
-            <input id="splitSearch" class="search-input" placeholder="Search split systems...">
-            <div class="table-wrap">
-                <table class="products-table">
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Split System Installation</span>
+            <input id="splitSearch" class="search-input" placeholder="Search split systems..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
+            </div>
+
+            <div class="overflow-y-auto max-h-64 border rounded-lg">
+                <table id="splitTable" class="products-table w-full border-collapse text-sm">
                     <thead><tr><th>Name</th><th>Unit Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
                     <tbody>
                     <?php foreach($split_installations as $s): $sid=(int)$s['id']; ?>
@@ -191,9 +194,13 @@ ob_start();
         </div>
 
         <!-- DUCTED INSTALLATION -->
-        <div class="card">
-            <h4>Ducted Installation</h4>
-            <div class="table-wrap">
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-medium text-gray-700">Ducted Installation</span>
+          <input id="splitSearch" class="search-input" placeholder="Search split systems..." class="border px-3 py-2 rounded-lg shadow-sm w-64">
+        </div>
+
+        <div class="overflow-y-auto max-h-64 border rounded-lg">
                 <table class="products-table">
                     <thead><tr><th>Equipment</th><th>Type</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
                     <tbody>
@@ -223,12 +230,22 @@ ob_start();
         </div>
 
         <!-- PERSONNEL -->
-        <div class="card">
-            <h4>Personnel</h4>
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+            <span class="font-medium text-gray-700">Personnel</span>
             <input id="personnelSearch" class="search-input" placeholder="Search personnel...">
-            <div class="table-wrap">
+            <div>
+
+            <div class="overflow-y-auto max-h-64 border rounded-lg">
                 <table class="products-table">
-                    <thead><tr><th>Name</th><th>Rate</th><th>Hours</th><th>Subtotal</th></tr></thead>
+                    <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th class="p-2 text-left">Name</th>
+          <th class="p-2 text-center">Rate</th>
+          <th class="p-2 text-center">Hours</th>
+          <th class="p-2 text-center">Subtotal</th>
+        </tr>
+      </thead>
                     <tbody>
                     <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
                         <tr>
@@ -250,8 +267,9 @@ ob_start();
         </div>
 
         <!-- EQUIPMENT -->
-        <div class="card">
-            <h4>Equipment</h4>
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col shadow border border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+        <span class="font-medium text-gray-700">Equipment</span>
             <input id="equipmentSearch" class="search-input" placeholder="Search equipment...">
             <div class="table-wrap">
                 <table class="products-table">
@@ -277,7 +295,8 @@ ob_start();
         </div>
 
         <!-- OTHER EXPENSES -->
-        <div class="card">
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col mb-4">
+        <span class="font-medium text-gray-700 mb-2">Other Expenses</span>
             <h4>Other Expenses</h4>
             <div id="otherExpensesContainer"></div>
             <button type="button" class="qbtn" id="addExpenseBtn">Add</button>
@@ -285,7 +304,7 @@ ob_start();
     </div>
 
     <!-- RIGHT PANEL WRAPPER -->
-<div class="w-80 flex flex-col gap-4">
+    <div class="w-80 flex flex-col gap-4">
 
     <!-- PROFIT CARD -->
     <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200">
