@@ -42,14 +42,11 @@ $order_date = $order['order_date'] ?? date('Y-m-d');
 $contact_number = $order['contact_number'] ?? 'N/A';
 $customer_name = $order['customer_name'] ?? 'N/A';
 
-$description  = "Customer Name: $customer_name\n";
-$description .= "Contact Number: $contact_number\n";
-$description .= "Date: $order_date\n";
-$description .= "Total: $" . number_format($total, 2) . "\n";
+$description = "Customer Name: $customer_name; Contact Number: $contact_number; Date: $order_date; Total: $" . number_format($total, 2);
 
 // ===================== PREPARE PAYLOAD =====================
 $payload = [
-    'summary'     => "Order #$order_id - $customer_name",
+    'summary' => "Order #$order_id - $customer_name",
     'description' => $description
 ];
 
@@ -57,8 +54,8 @@ if ($staff_uuid) {
     $payload['staff'] = [$staff_uuid];
 }
 
-// ===================== DEBUG: check payload =====================
-// Uncomment to test
+// ===================== DEBUG PAYLOAD =====================
+// Uncomment to test JSON before sending
 // echo json_encode($payload, JSON_PRETTY_PRINT);
 // exit();
 
@@ -71,7 +68,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 ]);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
 $response  = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
