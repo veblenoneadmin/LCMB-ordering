@@ -33,9 +33,11 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         table td { font-size:14px; vertical-align:middle; text-align:center; }
         table th:first-child, table td:first-child { text-align:left; padding-left:.75rem; }
         #productsTable, #personnelTable, #ductedInstallationsTable { font-size:13px; }
-        .qty-input, .installation-qty { font-size:13px; height:28px; padding: 0; width: 38px !important;  /* Tight 2–3 digit width */ }
-        .qty-col { width: 100px; }
+        .qty-input, .installation-qty { width: 42px; padding: 2px; text-align: center; }
+        .products-table th:nth-child(3), .products-table td:nth-child(3) { width: 110px;   /* Adjust as needed */ text-align: center; }
         .plus-btn, .minus-btn { font-size:12px; padding:2px 6px; }
+        .qty-wrapper { display: flex; align-items: center; gap: 4px !important; /* very small gap */ }
+        .qty-wrapper { display: flex; align-items: center; gap: 4px !important; /* very small gap */ }
         .pers-check { transform:scale(0.9); }
         #appointment_date::placeholder { color:#999; opacity:1; }
     </style>
