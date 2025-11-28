@@ -42,34 +42,35 @@ $order_date = $order['order_date'] ?? date('Y-m-d');
 $contact_number = $order['contact_number'] ?? 'N/A';
 $customer_name = $order['customer_name'] ?? 'N/A';
 
-// Put all optional details inside description (required by ServiceM8)
-$description = "Customer Name: $customer_name; Contact Number: $contact_number; Date: $order_date; Total: $" . number_format($total, 2);
-
-// ===================== PREPARE PAYLOAD =====================
+// Minimal valid payload per ServiceM8 API
 $payload = [
     'summary' => "Order #$order_id - $customer_name",
-    'description' => $description
+    'description' => "Customer Name: $customer_name; Contact Number: $contact_number; Date: $order_date; Total: $" . number_format($total, 2)
 ];
 
-// Assign staff if available
+// Assign staff if UUID exists
 if ($staff_uuid) {
     $payload['staff'] = [$staff_uuid];
 }
 
 // ===================== SEND TO SERVICEM8 =====================
+$json_payload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+if (!$json_payload) {
+    die("Failed to encode JSON payload: " . json_last_error_msg());
+}
+
 $ch = curl_init("https://api.servicem8.com/api_1.0/job.json");
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json",
-    "Accept: application/json",
-    "X-API-Key: $servicem8_api_key"
-]);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "X-API-Key: $servicem8_api_key"
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $json_payload);
+curl_setopt($ch, CURLOPT_VERBOSE, true); // Debug: shows request details
 
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$record_uuid = curl_getinfo($ch, CURLINFO_HEADER_OUT); // Optional: header info
 curl_close($ch);
 
 // ===================== CHECK RESPONSE =====================
@@ -80,13 +81,10 @@ if ($http_code < 200 || $http_code >= 300) {
 }
 
 // ===================== PARSE RETURNED UUID =====================
-// ServiceM8 returns x-record-uuid in headers; PHP cURL can capture it if needed
-// You can store this in your database for future reference
-// Example (simplest): just decode JSON response if returned
 $response_data = json_decode($response, true);
 $created_job_uuid = $response_data['uuid'] ?? '';
 
-// ===================== UPDATE ORDER STATUS =====================
+// ===================== UPDATE DATABASE STATUS =====================
 $stmt = $pdo->prepare("UPDATE orders SET status = 'sent', servicem8_job_uuid = ? WHERE id = ?");
 $stmt->execute([$created_job_uuid, $order_id]);
 
