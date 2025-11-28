@@ -189,7 +189,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         $pdo->commit();
         // redirect to review page or show message
-        header("Location: review_order.php?id=" . (int)$order_id);
+        header("Location: review_order.php?order_id=" . $order_id);
         exit;
     } catch(Exception $e){
         $pdo->rollBack();

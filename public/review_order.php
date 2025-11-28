@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-$order_id = $_GET['order_id'] ?? 0;
+$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+
 
 // Fetch order
 $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
