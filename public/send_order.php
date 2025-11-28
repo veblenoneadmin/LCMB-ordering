@@ -19,13 +19,9 @@ if (!$items) die("No items found.");
 $total = 0;
 foreach ($items as $item) $total += $item['price'] * $item['quantity'];
 
-// ========== GET SERVICE M8 CREDENTIALS ==========
-$servicem8_email   = getenv('SERVICEM8_EMAIL');
+// ========== GET SERVICE M8 API KEY ==========
 $servicem8_api_key = getenv('SERVICEM8_API_KEY');
-
-if (!$servicem8_email || !$servicem8_api_key) {
-    die("ServiceM8 credentials not set.");
-}
+if (!$servicem8_api_key) die("ServiceM8 API key not set.");
 
 // ========== BUILD JOB DESCRIPTION ==========
 $description  = "Order ID: $order_id\n";
@@ -38,16 +34,19 @@ foreach ($items as $i) {
 }
 
 // ========== PREPARE PAYLOAD ==========
-$payload = [[
+$payload = [
     'summary'     => "Order #$order_id - {$order['customer_name']}",
     'description' => $description,
     'contact'     => $order['customer_name']
-]];
+];
 
 // ========== SEND TO SERVICEM8 ==========
 $ch = curl_init("https://api.servicem8.com/api_1.0/job.json");
-curl_setopt($ch, CURLOPT_USERPWD, "$servicem8_email:$servicem8_api_key");
-curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json", "Accept: application/json"]);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "Accept: application/json",
+    "X-API-Key: $servicem8_api_key" // <-- Use X-API-Key now
+]);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
