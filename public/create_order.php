@@ -234,10 +234,10 @@ ob_start();
                             <td class="product-name p-2"><?= htmlspecialchars($p['name']) ?></td>
                             <td class="p-2 text-center">$<span class="prod-price"><?= number_format($p['price'],2) ?></span></td>
                             <td class="p-2 text-center">
-                                <div class="flex items-center gap-2">
-                                    <button type="button" class="px-1 py-1 bg-gray-200 rounded qtbn minus">-</button>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" class="px-2 py-1 bg-gray-200 rounded qtbn minus">-</button>
                                     <input type="number" min="0" value="0" name="product[<?= $pid ?>]" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>">
-                                    <button type="button" class="px-1 py-1 bg-gray-200 rounded qtbn plus">+</button>
+                                    <button type="button" class="px-2 py-1 bg-gray-200 rounded qtbn plus">+</button>
                                 </div>
                             </td>
                             <td class="subtotal p-2 text-center">$<span class="row-subtotal">0.00</span></td>
