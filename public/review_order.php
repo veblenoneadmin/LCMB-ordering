@@ -7,17 +7,66 @@ $order_id = $_GET['order_id'] ?? 0;
 // Fetch order
 $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
 $stmt->execute([$order_id]);
-$order = $stmt->fetch();
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch items
+if (!$order) {
+    die("<h2 style='color:red; padding:20px;'>❌ Order not found or has been deleted.</h2>");
+}
+
+// Fetch order items
 $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
-$items = $stmtItem->fetchAll();
+$itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
+
+// Build items with display names
+$items = [];
+foreach ($itemsRaw as $item) {
+    $name = '';
+    switch($item['item_type'] ?? '') {
+        case 'product':
+            $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?? 'Unknown Product';
+            break;
+        case 'installation':
+            if (($item['installation_type'] ?? '') === 'split') {
+                $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
+                $stmtName->execute([$item['item_id']]);
+                $name = $stmtName->fetchColumn() ?? 'Unknown Split Installation';
+            } else {
+                $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
+                $stmtName->execute([$item['item_id']]);
+                $name = $stmtName->fetchColumn() ?? 'Unknown Ducted Installation';
+                $name .= ' (' . ($item['installation_type'] ?? '') . ')';
+            }
+            break;
+        case 'personnel':
+            $stmtName = $pdo->prepare("SELECT name FROM personnel WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?? 'Unknown Personnel';
+            break;
+        case 'equipment':
+            $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?? 'Unknown Equipment';
+            break;
+        case 'expense':
+            $name = $item['name'] ?? 'Other Expense';
+            break;
+        default:
+            $name = 'Unknown Item';
+    }
+    $items[] = [
+        'name' => $name,
+        'qty' => $item['qty'] ?? 0,
+        'price' => $item['price'] ?? 0
+    ];
+}
 
 // Compute totals
 $subtotal = 0;
 foreach ($items as $item) {
-    $subtotal += $item['price'] * $item['quantity'];
+    $subtotal += $item['qty'] * $item['price'];
 }
 $tax = $subtotal * 0.10;
 $grand_total = $subtotal + $tax;
@@ -26,7 +75,6 @@ $grand_total = $subtotal + $tax;
 ob_start();
 ?>
 
-<!-- PAGE WRAPPER -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     <!-- LEFT SECTION -->
@@ -41,19 +89,17 @@ ob_start();
         <!-- CLIENT INFORMATION -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Client Information</h3>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="text-gray-500 text-sm font-medium">Customer Name</label>
                     <div class="mt-1 p-3 bg-gray-50 rounded-xl text-gray-800 border">
-                        <?= htmlspecialchars($order['customer_name']) ?>
+                        <?= htmlspecialchars($order['customer_name'] ?? '') ?>
                     </div>
                 </div>
-
                 <div>
                     <label class="text-gray-500 text-sm font-medium">Order Date</label>
                     <div class="mt-1 p-3 bg-gray-50 rounded-xl text-gray-800 border">
-                        <?= htmlspecialchars($order['order_date']) ?>
+                        <?= htmlspecialchars($order['appointment_date'] ?? '') ?>
                     </div>
                 </div>
             </div>
@@ -62,7 +108,6 @@ ob_start();
         <!-- ITEMS TABLE -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Order Items</h3>
-
             <div class="overflow-auto rounded-xl border border-gray-200">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100 text-gray-700">
@@ -75,12 +120,12 @@ ob_start();
                     </thead>
                     <tbody>
                     <?php foreach ($items as $item): 
-                        $item_sub = $item['price'] * $item['quantity'];
+                        $item_sub = $item['price'] * $item['qty'];
                     ?>
                         <tr class="border-t hover:bg-gray-50">
-                            <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['item_name']) ?></td>
+                            <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
                             <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
-                            <td class="px-4 py-3 text-center"><?= $item['quantity'] ?></td>
+                            <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
                             <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -99,8 +144,8 @@ ob_start();
         <div class="space-y-3 mb-6">
             <?php foreach ($items as $item): ?>
                 <div class="flex justify-between text-sm text-gray-700 border-b pb-2">
-                    <span><?= htmlspecialchars($item['item_name']) ?> × <?= $item['quantity'] ?></span>
-                    <span><?= number_format($item['price'] * $item['quantity'], 2) ?></span>
+                    <span><?= htmlspecialchars($item['name']) ?> × <?= $item['qty'] ?></span>
+                    <span><?= number_format($item['price'] * $item['qty'], 2) ?></span>
                 </div>
             <?php endforeach; ?>
         </div>
