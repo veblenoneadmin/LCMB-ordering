@@ -151,23 +151,25 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         // Insert into orders table.
         // Columns present in your DB: (id, customer_name, customer_email, job_address, total_amount, order_number, status, total, tax, discount, created_at, contact_number, appointment_date)
-        $stmt = $pdo->prepare(
-            "INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
-        );
-        $stmt->execute([
-            $customer_name,
-            $customer_email,
-            $contact_number,
-            $job_address,
-            $appointment_date,
-            f2($subtotal),      // total_amount field — using subtotal before tax (matches your schema expectations)
-            $order_number,
-            'pending',
-            f2($grand_total),   // total -> grand total
-            f2($tax),
-            f2($discount)
-        ]);
+       $stmt = $pdo->prepare(
+    "INSERT INTO orders (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+);
+
+$stmt->execute([
+    $customer_name,
+    $customer_email,
+    $contact_number,
+    $job_address,
+    $appointment_date,
+    f2($subtotal),
+    $order_number,
+    'pending',
+    f2($grand_total),
+    f2($tax),
+    f2($discount)
+]);
+
 
         $order_id = $pdo->lastInsertId();
 
