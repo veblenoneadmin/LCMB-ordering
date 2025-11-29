@@ -15,11 +15,11 @@ if (!$order) {
 
 // 3. Extract fields
 $data = [
-    "name"             => $order['name'],
-    "phone"            => $order['phone'],
-    "date"             => $order['date'],
-    "total"            => $order['total'],
-    "technician_uuid"  => $order['technician_uuid']
+    "name"             => $order['customer_name'],
+    "phone"            => $order['contact_number'],
+    "date"             => $order['appointment_date'],
+    "total"            => $order['total_amount'],
+    "technician_uuid"  => $order['technician_uuid'] ?? null // make sure you set this when saving order
 ];
 
 // 4. Your REAL n8n webhook URL (replace this!)

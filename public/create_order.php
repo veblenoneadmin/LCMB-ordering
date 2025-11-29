@@ -22,6 +22,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $customer_name = trim($_POST['customer_name'] ?? '');
     $customer_email = trim($_POST['customer_email'] ?? null);
     $contact_number = trim($_POST['contact_number'] ?? null);
+    $job_address = trim($_POST['job_address'] ?? null);
     $appointment_date = !empty($_POST['appointment_date']) ? $_POST['appointment_date'] : null;
 
     // Build items array (normalized for insertion)
@@ -158,6 +159,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $customer_name,
             $customer_email,
             $contact_number,
+            $job_address,
             $appointment_date,
             f2($subtotal),      // total_amount field — using subtotal before tax (matches your schema expectations)
             $order_number,
@@ -213,6 +215,7 @@ ob_start();
                 <input type="text" name="customer_name" placeholder="Name" class="input" required>
                 <input type="email" name="customer_email" placeholder="Email" class="input">
                 <input type="text" name="contact_number" placeholder="Phone" class="input">
+                <input type="text" name="job_address" placeholder="Address" class="input">
                 <input type="date" name="appointment_date" value="<?= date('Y-m-d') ?>" class="input">
             </div>
         </div>
