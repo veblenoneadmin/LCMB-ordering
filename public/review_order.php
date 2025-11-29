@@ -4,7 +4,6 @@ require_once __DIR__ . '/layout.php';
 
 $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
 
-
 // Fetch order
 $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
 $stmt->execute([$order_id]);
@@ -169,19 +168,53 @@ ob_start();
             </div>
         </div>
 
-        <!-- SEND TO SERVICEM8 -->
-        <form method="post" action="send_order.php" class="mt-6">
-            <input type="hidden" name="order_id" value="<?= $order_id ?>">
-
+        <!-- SEND TO SERVICEM8 (AJAX) -->
+        <div class="mt-6">
             <button
-                type="submit"
+                id="sendToSM8Btn"
+                data-order-id="<?= $order_id ?>"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
                 Send Order to ServiceM8
             </button>
-        </form>
+            <div id="sendSM8Msg" class="mt-2 text-sm"></div>
+        </div>
     </div>
 
 </div>
+
+<script>
+document.getElementById('sendToSM8Btn').addEventListener('click', async function(){
+    const btn = this;
+    const orderId = btn.dataset.orderId;
+    const msgEl = document.getElementById('sendSM8Msg');
+
+    btn.disabled = true;
+    msgEl.textContent = 'Sending order...';
+    msgEl.style.color = 'black';
+
+    try {
+        const response = await fetch('send_order.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'order_id=' + encodeURIComponent(orderId)
+        });
+
+        const text = await response.text();
+
+        if(response.ok){
+            msgEl.innerHTML = `<span style="color:green;">✅ Successfully sent to ServiceM8!</span><pre style="font-size:12px;">${text}</pre>`;
+        } else {
+            msgEl.innerHTML = `<span style="color:red;">❌ Failed to send order.</span><pre style="font-size:12px;">${text}</pre>`;
+        }
+    } catch(err){
+        msgEl.innerHTML = `<span style="color:red;">❌ Error: ${err.message}</span>`;
+    }
+
+    btn.disabled = false;
+});
+</script>
 
 <?php
 $content = ob_get_clean();
