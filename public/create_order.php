@@ -150,10 +150,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pdo->beginTransaction();
 
         // Insert into orders table.
-        // Columns present in your DB: (id, customer_name, customer_email, total_amount, order_number, status, total, tax, discount, created_at, contact_number, appointment_date)
+        // Columns present in your DB: (id, customer_name, customer_email, job_address, total_amount, order_number, status, total, tax, discount, created_at, contact_number, appointment_date)
         $stmt = $pdo->prepare(
             "INSERT INTO orders (customer_name, customer_email, contact_number, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
         );
         $stmt->execute([
             $customer_name,
