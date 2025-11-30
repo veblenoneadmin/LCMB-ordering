@@ -85,7 +85,7 @@ $payload = [
 ];
 
 // 5️⃣ Send to n8n webhook
-$webhook_url = "https://n8n.yourdomain.com/webhook/8dc36143-3e26-4e47-a0f7-ab0cb8b2143d";
+$webhook_url = "https://primary-s0q-production.up.railway.app/webhook/8dc36143-3e26-4e47-a0f7-ab0cb8b2143d";
 
 $options = [
     "http" => [
