@@ -87,7 +87,7 @@ $payload = [
     "grand_total"      => $order['total'],
     "discount"         => $order['discount'],
 
-    "technician_uuid"  => $order['servicem8_uuid'],    // <-- required by ServiceM8
+    "technician_uuid"  => $order['technician_uuid'],    // <-- required by ServiceM8
 
     "items"            => $items
 ];
