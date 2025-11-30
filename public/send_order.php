@@ -75,14 +75,23 @@ $payload = [
     "customer_name"    => $order['customer_name'],
     "customer_email"   => $order['customer_email'],
     "contact_number"   => $order['contact_number'],
-    "appointment_date" => $order['appointment_date'],
+
+    // FIXED for n8n field mapping:
+    "date"             => $order['appointment_date'],   // <-- n8n uses $json["date"]
+    "total"            => $order['total'],              // <-- n8n uses $json["total"]
+
+    "job_address"      => $order['address'] ?? "No address provided",
+    "job_description"  => "Order #{$order['order_number']} for {$order['customer_name']}",
     "total_amount"     => $order['total_amount'],
     "tax"              => $order['tax'],
     "grand_total"      => $order['total'],
     "discount"         => $order['discount'],
-    "technician_uuid"  => $order['technician_uuid'] ?? null,
+
+    "technician_uuid"  => $order['technician_uuid'],    // <-- required by ServiceM8
+
     "items"            => $items
 ];
+
 
 // 5️⃣ Send to n8n webhook
 $webhook_url = "https://primary-s0q-production.up.railway.app/webhook/8dc36143-3e26-4e47-a0f7-ab0cb8b2143d";
