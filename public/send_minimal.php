@@ -32,14 +32,10 @@ if ($order_id <= 0) {
 
 try {
     // Fetch order details from database
+    // Adjust columns to match your actual table structure
     $stmt = $pdo->prepare("
         SELECT 
-            customer_name,
-            customer_email,
-            customer_number,
-            order_total,
-            order_notes,
-            created_at
+            customer_name
         FROM orders 
         WHERE id = ?
     ");
@@ -51,21 +47,12 @@ try {
     }
 
     // Prepare ServiceM8 job data
+    // Minimal fields - only status is commonly used, but all are optional
     $jobData = [
-        "job_address" => $order['customer_name'] ?? 'No address provided',
-        "status" => "Quote", // or "Work Order", "Completed", etc.
-        "job_description" => "Order #$order_id\n\n" . ($order['order_notes'] ?? ''),
-        "generated_job_id" => $order_id, // Link to your order ID
+        "status" => "Quote", // Options: "Quote", "Work Order", "Completed", "Cancelled"
+        "job_description" => "Order #$order_id - " . $order['customer_name'],
+        "generated_job_id" => $order_id, // Links to your order ID for easy reference
     ];
-
-    // Add optional fields if available
-    if (!empty($order['customer_email'])) {
-        $jobData['job_contact_email'] = $order['customer_email'];
-    }
-    
-    if (!empty($order['customer_number'])) {
-        $jobData['job_contact_phone'] = $order['customer_number'];
-    }
 
     $jsonData = json_encode($jobData);
 
