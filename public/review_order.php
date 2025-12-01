@@ -13,11 +13,6 @@ if (!$order) {
     die("<h2 style='color:red; padding:20px;'>❌ Order not found or has been deleted.</h2>");
 }
 
-$profit = $subtotal * 0.30;
-$percent_margin = ($profit / $subtotal) * 100;
-$net_profit = (($profit - $gst) / $subtotal) * 100;
-$total_profit = $profit;
-
 // Fetch order items
 $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
@@ -76,13 +71,28 @@ foreach ($itemsRaw as $item) {
     }
 }
 
-// Compute totals
+// ==========================
+// CALCULATE SUBTOTALS & PROFIT
+// ==========================
 $subtotal = 0;
+$total_cost = 0;
+
 foreach ($itemsRaw as $item) {
-    $subtotal += $item['qty'] * $item['price'];
+    $qty = $item['qty'] ?? 1;
+    $price = $item['price'] ?? 0;
+    $cost = $item['cost'] ?? ($price * 0.7); // Default cost = 70% of price
+
+    $subtotal += $price * $qty;
+    $total_cost += $cost * $qty;
 }
-$tax = $subtotal * 0.10;
+
+$tax = round($subtotal * 0.10, 2);
 $grand_total = $subtotal + $tax;
+
+$profit = $subtotal - $total_cost;
+$percent_margin = $subtotal > 0 ? ($profit / $subtotal) * 100 : 0;
+$net_profit = $subtotal > 0 ? (($profit - $tax) / $subtotal) * 100 : 0;
+$total_profit = $profit;
 
 ob_start();
 ?>
@@ -153,95 +163,69 @@ ob_start();
     </div>
 
     <!-- SUMMARY PANEL -->
-<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
+    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
 
-   <!-- PROFIT CARD -->
-    <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
-        <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
+        <!-- PROFIT CARD -->
+        <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
+            <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
 
-        <div class="flex justify-between text-gray-600 mb-1">
-            <span>Profit:</span>
-            <span>$<?= number_format($profit, 2) ?></span>
+            <div class="flex justify-between text-gray-600 mb-1">
+                <span>Profit:</span>
+                <span>$<?= number_format($profit, 2) ?></span>
+            </div>
+
+            <div class="flex justify-between text-gray-600 mb-1">
+                <span>Percent Margin:</span>
+                <span><?= number_format($percent_margin, 2) ?>%</span>
+            </div>
+
+            <div class="flex justify-between text-gray-600 mb-1">
+                <span>Net Profit:</span>
+                <span><?= number_format($net_profit, 2) ?>%</span>
+            </div>
+
+            <div class="flex justify-between font-semibold text-gray-700">
+                <span>Total Profit:</span>
+                <span>$<?= number_format($total_profit, 2) ?></span>
+            </div>
         </div>
 
-        <div class="flex justify-between text-gray-600 mb-1">
-            <span>Percent Margin:</span>
-            <span><?= number_format($percent_margin, 2) ?>%</span>
+        <!-- TOTALS -->
+        <div class="border-t pt-4 text-sm space-y-2">
+            <div class="flex justify-between text-gray-700">
+                <span>Subtotal</span>
+                <span><?= number_format($subtotal, 2) ?></span>
+            </div>
+
+            <div class="flex justify-between text-gray-700">
+                <span>Tax (10%)</span>
+                <span><?= number_format($tax, 2) ?></span>
+            </div>
+
+            <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
+                <span>Grand Total</span>
+                <span><?= number_format($grand_total, 2) ?></span>
+            </div>
         </div>
 
-        <div class="flex justify-between text-gray-600 mb-1">
-            <span>Net Profit:</span>
-            <span><?= number_format($net_profit, 2) ?>%</span>
-        </div>
+        <!-- SEND TO SERVICEM8 / N8N -->
+        <form method="post" action="send_order.php" class="mt-6">
+            <input type="hidden" name="order_id" value="<?= $order_id ?>">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                Send Order to N8N
+            </button>
+        </form>
 
-        <div class="flex justify-between font-semibold text-gray-700">
-            <span>Total Profit:</span>
-            <span>$<?= number_format($total_profit, 2) ?></span>
-        </div>
+        <form method="post" action="send_minimal.php" class="mt-6">
+            <input type="hidden" name="order_id" value="<?= $order_id ?>">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                Send Order to ServiceM8
+            </button>
+        </form>
+
     </div>
-
-    <!-- TOTALS -->
-    <div class="border-t pt-4 text-sm space-y-2">
-        <div class="flex justify-between text-gray-700">
-            <span>Subtotal</span>
-            <span><?= number_format($subtotal, 2) ?></span>
-        </div>
-
-        <div class="flex justify-between text-gray-700">
-            <span>Tax (10%)</span>
-            <span><?= number_format($tax, 2) ?></span>
-        </div>
-
-        <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
-            <span>Grand Total</span>
-            <span><?= number_format($grand_total, 2) ?></span>
-        </div>
-    </div>
-
-    <!-- SEND TO SERVICEM8 / N8N -->
-    <form method="post" action="send_order.php" class="mt-6">
-        <input type="hidden" name="order_id" value="<?= $order_id ?>">
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-            Send Order to N8N
-        </button>
-    </form>
-
-    <form method="post" action="send_minimal.php" class="mt-6">
-        <input type="hidden" name="order_id" value="<?= $order_id ?>">
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-            Send Order to ServiceM8
-        </button>
-    </form>
 
 </div>
-
-
-<?php
-//-----------------------------------
-// PROFIT CALCULATIONS (must run FIRST)
-//-----------------------------------
-$subtotal = 0;
-$total_cost = 0;
-
-foreach ($itemsRaw as $item) {
-    $qty = $item['qty'] ?? 1;
-    $price = $item['price'] ?? 0;
-
-    // Default cost = 70% of price
-    $cost = $item['cost'] ?? ($price * 0.7);
-
-    $subtotal += $price * $qty;
-    $total_cost += $cost * $qty;
-}
-
-$tax = round($subtotal * 0.10, 2);
-$grand_total = $subtotal + $tax;
-
-$profit = $subtotal - $total_cost;
-$percent_margin = $subtotal > 0 ? ($profit / $subtotal) * 100 : 0;
-$net_profit = $percent_margin - 10; // remove tax % impact
-$total_profit = $profit;
-?>
 
 <?php
 $content = ob_get_clean();
