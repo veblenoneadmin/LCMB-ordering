@@ -28,11 +28,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     // Build items array (normalized for insertion)
     $items = [];
 
-    // PRODUCTS (qty integer)
+     // PRODUCTS
     foreach($_POST['product'] ?? [] as $pid => $qty){
         $qty = intval($qty);
-        if($qty > 0){
-            // get price for safety
+        if($qty>0){
             $stmt = $pdo->prepare("SELECT price FROM products WHERE id=? LIMIT 1");
             $stmt->execute([$pid]);
             $price = (float)$stmt->fetchColumn();
@@ -46,45 +45,45 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 
-    // SPLIT INSTALLATIONS (qty integer)
+    // SPLIT INSTALLATIONS (ENUM-safe)
     foreach($_POST['split'] ?? [] as $sid => $qty){
         $qty = intval($qty);
-        if($qty > 0){
+        if($qty>0){
             $stmt = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id=? LIMIT 1");
             $stmt->execute([$sid]);
             $price = (float)$stmt->fetchColumn();
             $items[] = [
                 'item_type' => 'installation',
                 'item_id' => $sid,
-                'installation_type' => 'split',
+                'installation_type' => null, // safe for ENUM
                 'qty' => $qty,
                 'price' => f2($price)
             ];
         }
     }
 
-    // DUCTED INSTALLATIONS (qty integer) -- ducted[ID][qty] and ducted[ID][type]
+    // DUCTED INSTALLATIONS (must be ENUM: indoor/outdoor)
     foreach($_POST['ducted'] ?? [] as $did => $data){
         $qty = intval($data['qty'] ?? 0);
-        $type = ($data['type'] ?? 'indoor') ?: 'indoor';
-        if($qty > 0){
+        $type = ($data['type'] ?? 'indoor');
+        if($qty>0){
             $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
             $stmt->execute([$did]);
             $price = (float)$stmt->fetchColumn();
             $items[] = [
                 'item_type' => 'installation',
                 'item_id' => $did,
-                'installation_type' => $type,
+                'installation_type' => in_array($type,['indoor','outdoor']) ? $type : 'indoor',
                 'qty' => $qty,
                 'price' => f2($price)
             ];
         }
     }
 
-    // PERSONNEL: convert hours into a single order_items row where price = rate * hours, qty = 1
+    // PERSONNEL
     foreach($_POST['personnel'] ?? [] as $pid => $hours){
         $hours = floatval($hours);
-        if($hours > 0){
+        if($hours>0){
             $stmt = $pdo->prepare("SELECT rate FROM personnel WHERE id=? LIMIT 1");
             $stmt->execute([$pid]);
             $rate = (float)$stmt->fetchColumn();
@@ -93,21 +92,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 'item_type' => 'personnel',
                 'item_id' => $pid,
                 'installation_type' => null,
-                'qty' => 1, // store as one line; price already includes hours
+                'qty' => 1,
                 'price' => f2($line_price)
             ];
         }
     }
 
-    // EQUIPMENT (qty integer)
+    // EQUIPMENT
     foreach($_POST['equipment'] ?? [] as $eid => $qty){
         $qty = intval($qty);
-        if($qty > 0){
+        if($qty>0){
             $stmt = $pdo->prepare("SELECT rate FROM equipment WHERE id=? LIMIT 1");
             $stmt->execute([$eid]);
             $rate = (float)$stmt->fetchColumn();
             $items[] = [
-                'item_type' => 'equipment', // treat equipment as product type in order_items
+                'item_type' => 'product', // treat as product
                 'item_id' => $eid,
                 'installation_type' => null,
                 'qty' => $qty,
@@ -116,16 +115,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 
-    // OTHER EXPENSES: names and amounts arrays
+    // OTHER EXPENSES
     $other_names = $_POST['other_expense_name'] ?? [];
     $other_amounts = $_POST['other_expense_amount'] ?? [];
-    foreach($other_amounts as $i => $amt){
+    foreach($other_amounts as $i=>$amt){
         $amt = floatval($amt);
         $name = trim($other_names[$i] ?? '');
-        if($amt > 0){
-            // store as product with item_id = 0 and installation_type = expense name (so it is visible)
+        if($amt>0){
             $items[] = [
-                'item_type' => 'expense',
+                'item_type' => 'product',
                 'item_id' => 0,
                 'installation_type' => $name ?: 'Other expense',
                 'qty' => 1,
