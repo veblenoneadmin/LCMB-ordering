@@ -174,7 +174,7 @@ ob_start();
             <span>$<?= number_format($total_profit, 2) ?></span>
         </div>
     </div>
-
+    
     <!-- TOTALS -->
     <div class="border-t pt-4 text-sm space-y-2">
         <div class="flex justify-between text-gray-700">
