@@ -150,22 +150,30 @@ ob_start();
     <!-- SUMMARY PANEL -->
 <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
 
-    <!-- PROFIT CARD -->
-   <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
-    <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Profit:</span><span>$<?= number_format($profit, 2) ?></span>
+   <!-- PROFIT CARD -->
+    <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
+        <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Profit:</span>
+            <span>$<?= number_format($profit, 2) ?></span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Percent Margin:</span>
+            <span><?= number_format($percent_margin, 2) ?>%</span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Net Profit:</span>
+            <span><?= number_format($net_profit, 2) ?>%</span>
+        </div>
+
+        <div class="flex justify-between font-semibold text-gray-700">
+            <span>Total Profit:</span>
+            <span>$<?= number_format($total_profit, 2) ?></span>
+        </div>
     </div>
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Percent Margin:</span><span><?= number_format($percent_margin, 2) ?>%</span>
-    </div>
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Net Profit:</span><span><?= number_format($net_profit, 2) ?>%</span>
-    </div>
-    <div class="flex justify-between font-semibold text-gray-700">
-        <span>Total Profit:</span><span>$<?= number_format($total_profit, 2) ?></span>
-    </div>
-</div>
 
     <!-- TOTALS -->
     <div class="border-t pt-4 text-sm space-y-2">
@@ -204,15 +212,17 @@ ob_start();
 
 
 <?php
+//-----------------------------------
+// PROFIT CALCULATIONS (must run FIRST)
+//-----------------------------------
 $subtotal = 0;
 $total_cost = 0;
 
-// Compute subtotal and total cost
 foreach ($itemsRaw as $item) {
     $qty = $item['qty'] ?? 1;
     $price = $item['price'] ?? 0;
 
-    // Assume cost is 70% of price if cost not stored
+    // Default cost = 70% of price
     $cost = $item['cost'] ?? ($price * 0.7);
 
     $subtotal += $price * $qty;
@@ -224,7 +234,7 @@ $grand_total = $subtotal + $tax;
 
 $profit = $subtotal - $total_cost;
 $percent_margin = $subtotal > 0 ? ($profit / $subtotal) * 100 : 0;
-$net_profit = $percent_margin - 10; // minus tax %
+$net_profit = $percent_margin - 10; // remove tax % impact
 $total_profit = $profit;
 ?>
 
