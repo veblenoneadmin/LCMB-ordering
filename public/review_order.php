@@ -181,6 +181,16 @@ ob_start();
         </form>
     </div>
 
+    <form method="post" action="send_minimal.php" class="mt-6">
+    <input type="hidden" name="order_id" value="<?= $order_id ?>">
+    <button
+        type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+        Send Order to ServiceM8
+    </button>
+</form>
+            </div>
+
 </div>
 
 <?php
