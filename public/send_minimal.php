@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../config.php'; // adjust path if needed
+require_once __DIR__ . '/../config.php';
 
 if (!isset($_POST['order_id'])) {
     die("Missing order_id");
