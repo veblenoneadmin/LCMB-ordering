@@ -13,6 +13,11 @@ if (!$order) {
     die("<h2 style='color:red; padding:20px;'>❌ Order not found or has been deleted.</h2>");
 }
 
+$profit = $subtotal * 0.30;
+$percent_margin = ($profit / $subtotal) * 100;
+$net_profit = (($profit - $gst) / $subtotal) * 100;
+$total_profit = $profit;
+
 // Fetch order items
 $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
@@ -174,7 +179,7 @@ ob_start();
             <span>$<?= number_format($total_profit, 2) ?></span>
         </div>
     </div>
-    
+
     <!-- TOTALS -->
     <div class="border-t pt-4 text-sm space-y-2">
         <div class="flex justify-between text-gray-700">

@@ -386,7 +386,26 @@ ob_start();
 
     <!-- RIGHT PANEL WRAPPER -->
     <div class="create-order-right" style="width:360px;">
-        <!-- PROFIT CARD -->
+        <!-- HIDDEN PROFIT CARD (required so layout does not error) -->
+<div id="profitCard" class="hidden bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
+    <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
+
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Profit:</span><span>$<span id="profitDisplay">0.00</span></span>
+    </div>
+
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Percent Margin:</span><span><span id="profitMarginDisplay">0.00</span>%</span>
+    </div>
+
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Net Profit:</span><span><span id="netProfitDisplay">0.00</span>%</span>
+    </div>
+
+    <div class="flex justify-between font-semibold text-gray-700">
+        <span>Total Profit:</span><span>$<span id="totalProfitDisplay">0.00</span></span>
+    </div>
+</div>
 
         <!-- SUMMARY CARD -->
         <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
@@ -522,6 +541,18 @@ ob_start();
   simpleSearch('splitSearch', '#splitTable', 'td');
   simpleSearch('personnelSearch', '.products-table', 'td');
   simpleSearch('equipmentSearch', '.products-table', 'td');
+
+  // PROFIT SUMMARY (JS — no PHP needed)
+let profit = subtotal * 0.30;
+let netProfitPercent = subtotal > 0 ? ((profit - gstAmount) / subtotal) * 100 : 0;
+let profitMargin = (profit / subtotal) * 100;
+let totalProfit = profit;
+
+document.getElementById('profitDisplay').textContent = profit.toFixed(2);
+document.getElementById('netProfitDisplay').textContent = netProfitPercent.toFixed(2);
+document.getElementById('profitMarginDisplay').textContent = isFinite(profitMargin) ? profitMargin.toFixed(2) : "0.00";
+document.getElementById('totalProfitDisplay').textContent = totalProfit.toFixed(2);
+
 
 })();
 </script>
