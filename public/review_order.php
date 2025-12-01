@@ -191,7 +191,7 @@ ob_start();
         </div>
 
         <!-- TOTALS -->
-        <div class="border-t pt-4 text-sm space-y-2">
+        <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
             <div class="flex justify-between text-gray-700">
                 <span>Subtotal</span>
                 <span><?= number_format($subtotal, 2) ?></span>
