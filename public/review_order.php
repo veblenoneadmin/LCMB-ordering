@@ -179,9 +179,8 @@ ob_start();
                 Send Order to ServiceM8
             </button>
         </form>
-    </div>
 
-    <form method="post" action="send_minimal.php" class="mt-6">
+     <form method="post" action="send_minimal.php" class="mt-6">
     <input type="hidden" name="order_id" value="<?= $order_id ?>">
     <button
         type="submit"
@@ -189,8 +188,7 @@ ob_start();
         Send Order to ServiceM8
     </button>
 </form>
-            </div>
-
+    </div>
 </div>
 
 <?php
