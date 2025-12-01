@@ -36,7 +36,7 @@ try {
         SELECT 
             customer_name,
             customer_email,
-            customer_phone,
+            customer_number,
             order_total,
             order_notes,
             created_at
@@ -63,8 +63,8 @@ try {
         $jobData['job_contact_email'] = $order['customer_email'];
     }
     
-    if (!empty($order['customer_phone'])) {
-        $jobData['job_contact_phone'] = $order['customer_phone'];
+    if (!empty($order['customer_number'])) {
+        $jobData['job_contact_phone'] = $order['customer_number'];
     }
 
     $jsonData = json_encode($jobData);
