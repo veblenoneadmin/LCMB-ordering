@@ -267,7 +267,7 @@ ob_start();
             <tr data-id="<?= $pid ?>" class="border-b">
                 <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
 
-                <td class="p-2 text-center"><?= htmlspecialchars($p['role']) ?></td>
+                <td class="p-2 text-center"><?= htmlspecialchars($p['role'] ?? '') ?></td>
 
                 <td class="p-2 text-center">
                     <div class="qty-wrapper">
