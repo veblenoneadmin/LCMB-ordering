@@ -251,11 +251,11 @@ ob_start();
     <input id="personnelSearch" class="search-input" placeholder="Search personnel...">
   </div>
   <div class="overflow-y-auto max-h-64 border rounded-lg">
-    <table class="products-table personnel-table w-full border-collapse text-sm">
+    <table class="personnel-table w-full border-collapse text-sm">
       <thead class="bg-gray-100 sticky top-0">
         <tr>
           <th class="p-2 text-left">Name</th>
-          <th class="p-2 text-left">Role</th>
+          <th class="p-2 text-center">Role</th>
           <th class="p-2 text-center">Date</th>
           <th class="p-2 text-center">Hours</th>
           <th class="p-2 text-center">Subtotal</th>
@@ -263,30 +263,27 @@ ob_start();
       </thead>
       <tbody>
         <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
-        <tr class="border-b" data-id="<?= $pid ?>">
-          <td class="p-2"><?= htmlspecialchars($p['name']) ?></td>
+        <tr data-id="<?= $pid ?>" class="border-b text-center">
+          <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
           <td class="p-2"><?= htmlspecialchars($p['role'] ?? 'Technician') ?></td>
-          <td class="p-2 text-center">
-            <input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date">
+          <td class="p-2">
+            <input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
           </td>
-          <td class="p-2 text-center">
-            <div class="qty-wrapper">
-              <button type="button" class="qtbn hour-minus">-</button>
-              <input type="number" min="0" step="0.5" value="0" name="personnel_hours[<?= $pid ?>]" 
-                     class="qty-input personnel-hours" data-rate="<?= htmlspecialchars($p['rate']) ?>">
-              <button type="button" class="qtbn hour-plus">+</button>
+          <td class="p-2">
+            <div class="flex justify-center items-center gap-2">
+              <button type="button" class="qtbn minus hour-minus">-</button>
+              <input type="number" min="0" value="0" name="personnel_hours[<?= $pid ?>]" 
+                     class="qty-input text-center" step="0.5" style="width:50px;">
+              <button type="button" class="qtbn plus hour-plus">+</button>
             </div>
           </td>
-          <td class="p-2 text-center">
-            $<span class="pers-subtotal" id="subtotal-<?= $pid ?>">0.00</span>
-          </td>
+          <td class="p-2">$<span class="pers-subtotal">0.00</span></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   </div>
 </div>
-
 
 <!-- EQUIPMENT -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
@@ -397,8 +394,8 @@ document.addEventListener("DOMContentLoaded", function(){
           let val = parseFloat(input.value) || 0;
 
           // Personnel hours plus/minus increments by 0.5
-          if(btn.classList.contains("hour-plus")) val += 0.5;
-          else if(btn.classList.contains("hour-minus")) val = Math.max(0,val-0.5);
+          if(btn.classList.contains("hour-plus"))
+          else if(btn.classList.contains("hour-minus"));
           // Other quantities increment by 1
           else if(btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus")) val++;
           else if(btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus")) val = Math.max(0,val-1);
