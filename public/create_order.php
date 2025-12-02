@@ -405,17 +405,24 @@ document.addEventListener("DOMContentLoaded", function(){
     updateSummary();
 });
 
-// plus/minus buttons
-  document.querySelectorAll('.qbtn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const input=btn.closest('td').querySelector('input');
-      let val=parseFloat(input.value)||0;
-      if(btn.classList.contains('plus')) val++;
-      else if(btn.classList.contains('minus')) val=Math.max(0,val-1);
-      input.value=val;
-      updateSummary();
-    });
+// Universal plus/minus handler
+document.querySelectorAll('.qbtn, .qtbn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    // find the nearest input element (qty, hours, etc.)
+    const input = btn.closest('td, div').querySelector('input');
+    if(!input) return;
+    let val = parseFloat(input.value) || 0;
+
+    if(btn.classList.contains('plus') || btn.classList.contains('split-plus') || btn.classList.contains('ducted-plus') || btn.classList.contains('hour-plus') || btn.classList.contains('equip-plus')){
+      val++;
+    } else if(btn.classList.contains('minus') || btn.classList.contains('split-minus') || btn.classList.contains('ducted-minus') || btn.classList.contains('hour-minus') || btn.classList.contains('equip-minus')){
+      val = Math.max(0,val-1);
+    }
+
+    input.value = val;
+    updateSummary(); // update totals immediately
   });
+});
 
   // toggle personnel extra
   document.querySelectorAll('.personnel-row').forEach(row=>{
