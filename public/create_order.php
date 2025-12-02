@@ -101,22 +101,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $stmt_item->execute([$order_id,$it['item_type'],$it['item_id']??null,$it['installation_type']??null,(int)$it['qty'],f2($it['price'])]);
         }
 
-        // PERSONNEL / DISPATCH
-        foreach($_POST['personnel_date'] ?? [] as $pid=>$date){
-            $date = $date ?: null;
-            $time_start = $_POST['personnel_time_start'][$pid] ?? null;
-            $time_end = $_POST['personnel_time_end'][$pid] ?? null;
-
-            if($date && $time_start && $time_end){
-                // compute hours
-                $start = new DateTime($time_start);
-                $end = new DateTime($time_end);
-                $interval = $start->diff($end);
-                $hours = $interval->h + ($interval->i/60);
-                $hours = round($hours,2);
-
-                $stmt_dispatch = $pdo->prepare("INSERT INTO dispatch (order_id, personnel_id, date, time_start, time_end, hours, created_at) VALUES (?,?,?,?,?,?,NOW())");
-                $stmt_dispatch->execute([$order_id,$pid,$date,$time_start,$time_end,$hours]);
+        // INSERT PERSONNEL DISPATCH
+        if(!empty($_POST['personnel_start'])){
+            $stmt_dispatch = $pdo->prepare(
+                "INSERT INTO dispatch (order_id, personnel_id, date, time_start, time_end, hours, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())"
+            );
+            foreach($_POST['personnel_start'] as $pid => $start){
+                $end = $_POST['personnel_end'][$pid] ?? null;
+                $hours = $_POST['personnel_hours'][$pid] ?? 0;
+                $date = $_POST['personnel_date'][$pid] ?? date('Y-m-d');
+                if($start && $end && $hours>0){
+                    $stmt_dispatch->execute([$order_id, $pid, $date, $start, $end, $hours]);
+                }
             }
         }
 
@@ -131,6 +128,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 ob_start();
 ?>
+
 
 <?php if($message): ?>
 <div class="alert" style="padding:10px;background:#fee;border:1px solid #fbb;margin-bottom:12px;"><?= htmlspecialchars($message) ?></div>
@@ -363,18 +361,19 @@ document.addEventListener("DOMContentLoaded", function(){
       const row = document.querySelector(`tr[data-id="${pid}"]`);
       const rate = parseFloatSafe(row?.querySelector(".pers-rate")?.textContent);
 
-      if(startInput && endInput && hoursInput){
-          const start = startInput.value;
-          const end = endInput.value;
-          if(start && end){
-              const t1 = new Date(`2000-01-01T${start}`);
-              const t2 = new Date(`2000-01-01T${end}`);
-              let hours = (t2 - t1)/(1000*60*60);
-              if(hours<0) hours = 0;
-              hoursInput.value = hours.toFixed(2);
-              const subtotalEl = row.querySelector(".pers-subtotal");
-              if(subtotalEl) subtotalEl.textContent = (hours*rate).toFixed(2);
-          }
+      if(!startInput || !endInput || !hoursInput || !row) return;
+
+      const start = startInput.value;
+      const end = endInput.value;
+
+      if(start && end){
+          const t1 = new Date(`2000-01-01T${start}`);
+          const t2 = new Date(`2000-01-01T${end}`);
+          let hours = (t2-t1)/(1000*60*60);
+          if(hours<0) hours=0;
+          hoursInput.value = hours.toFixed(2);
+          const subtotalEl = row.querySelector(".pers-subtotal");
+          if(subtotalEl) subtotalEl.textContent = (hours*rate).toFixed(2);
       }
   }
 
@@ -382,13 +381,11 @@ document.addEventListener("DOMContentLoaded", function(){
   function updateSummary(){
       let subtotal=0;
 
-      // Qty-based rows
       document.querySelectorAll("tr").forEach(row=>{
           const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
           if(subEl) subtotal += parseFloatSafe(subEl.textContent);
       });
 
-      // Other expenses
       document.querySelectorAll(".other-exp-amount").forEach(inp=> subtotal+=parseFloatSafe(inp.value));
 
       const tax = subtotal*0.10;
@@ -405,20 +402,33 @@ document.addEventListener("DOMContentLoaded", function(){
           const input = btn.closest("td, div").querySelector("input");
           if(!input) return;
           let val = parseFloat(input.value) || 0;
-          if(btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("hour-plus") || btn.classList.contains("equip-plus")){
-              val++;
-          } else if(btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("hour-minus") || btn.classList.contains("equip-minus")){
-              val = Math.max(0,val-1);
-          }
+
+          // Personnel hours plus/minus increments by 0.5
+          if(btn.classList.contains("hour-plus")) val += 0.5;
+          else if(btn.classList.contains("hour-minus")) val = Math.max(0,val-0.5);
+          // Other quantities increment by 1
+          else if(btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus")) val++;
+          else if(btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus")) val = Math.max(0,val-1);
+
           input.value = val;
           const row = input.closest("tr");
           updateRowSubtotal(row);
+
+          // Update personnel subtotal if applicable
+          if(input.name.startsWith("personnel_hours")){
+              const pid = input.name.match(/\[(\d+)\]/)[1];
+              updatePersonnelHours(pid);
+          }
+
           updateSummary();
       });
   });
 
   // ---------- PERSONNEL EVENTS ----------
   document.querySelectorAll(".personnel-start, .personnel-end").forEach(input=>{
+      // 30-minute increments
+      input.step = 1800;
+
       const pid = input.dataset.id;
       input.addEventListener("change", ()=>{
           updatePersonnelHours(pid);
@@ -466,8 +476,8 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   simpleSearch("productSearch",".products-table","td.product-name");
   simpleSearch("splitSearch","#splitTable","td");
-  simpleSearch("personnelSearch",".products-table","td");
-  simpleSearch("equipmentSearch",".products-table","td");
+  simpleSearch("personnelSearch",".personnel-table","td");
+  simpleSearch("equipmentSearch",".equipment-table","td");
 
   // ---------- INITIAL CALC ----------
   document.querySelectorAll("tr").forEach(updateRowSubtotal);
