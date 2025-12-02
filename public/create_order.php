@@ -246,48 +246,43 @@ ob_start();
 
 <!-- PERSONNEL TABLE -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-3">
-        <span class="font-medium text-gray-700">Personnel</span>
-        <input id="personnelSearch" class="search-input" placeholder="Search personnel..." >
-    </div>
-
-    <div class="overflow-y-auto max-h-64 border rounded-lg">
-        <table class="products-table personnel-table w-full border-collapse text-sm">
-            <thead class="bg-gray-100 sticky top-0">
-            <tr>
-                <th class="p-2 text-left">Name</th>
-                <th class="p-2 text-center">Role</th>
-                <th class="p-2 text-center">Hours</th>
-                <th class="p-2 text-center">Subtotal</th>
-            </tr>
-            </thead>
-
-            <tbody>
-            <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
-            <tr data-id="<?= $pid ?>" class="border-b">
-                <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
-
-                <td class="p-2 text-center"><?= htmlspecialchars($p['role'] ?? '') ?></td>
-
-                <td class="p-2 text-center">
-                    <div class="qty-wrapper">
-                        <button type="button" class="qtbn hour-minus">-</button>
-                        <input type="number" min="0" value="0"
-                               name="personnel_hours[<?= $pid ?>]"
-                               class="qty-input pers-hours" data-rate="<?= $p['rate'] ?>">
-                        <button type="button" class="qtbn hour-plus">+</button>
-                    </div>
-                </td>
-
-                <td class="p-2 text-center">
-                    $<span class="pers-subtotal">0.00</span>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-
-        </table>
-    </div>
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Personnel</span>
+    <input id="personnelSearch" class="search-input" placeholder="Search personnel...">
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg">
+    <table class="personnel-table w-full border-collapse text-sm">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th class="p-2 text-left">Name</th>
+          <th class="p-2 text-center">Role</th>
+          <th class="p-2 text-center">Date</th>
+          <th class="p-2 text-center">Hours</th>
+          <th class="p-2 text-center">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
+        <tr data-id="<?= $pid ?>" class="border-b text-center">
+          <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
+          <td class="p-2"><?= htmlspecialchars($p['role'] ?? 'Technician') ?></td>
+          <td class="p-2">
+            <input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
+          </td>
+          <td class="p-2">
+            <div class="flex justify-center items-center gap-2">
+              <button type="button" class="qtbn minus hour-minus">-</button>
+              <input type="number" min="0" value="0" name="personnel_hours[<?= $pid ?>]" 
+                     class="qty-input text-center" step="0.5" style="width:50px;">
+              <button type="button" class="qtbn plus hour-plus">+</button>
+            </div>
+          </td>
+          <td class="p-2">$<span class="pers-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 
