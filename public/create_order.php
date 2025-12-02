@@ -369,29 +369,6 @@ document.addEventListener("DOMContentLoaded", function(){
       if(subtotalEl) subtotalEl.textContent = (qty*price).toFixed(2);
   }
 
-  // ---------- PERSONNEL HOURS ----------
-  function updatePersonnelHours(pid){
-      const startInput = document.querySelector(`input[name="personnel_start[${pid}]"]`);
-      const endInput = document.querySelector(`input[name="personnel_end[${pid}]"]`);
-      const hoursInput = document.querySelector(`input[name="personnel_hours[${pid}]"]`);
-      const row = document.querySelector(`tr[data-id="${pid}"]`);
-      const rate = parseFloatSafe(row?.querySelector(".pers-rate")?.textContent);
-
-      if(!startInput || !endInput || !hoursInput || !row) return;
-
-      const start = startInput.value;
-      const end = endInput.value;
-
-      if(start && end){
-          const t1 = new Date(`2000-01-01T${start}`);
-          const t2 = new Date(`2000-01-01T${end}`);
-          let hours = (t2-t1)/(1000*60*60);
-          if(hours<0) hours=0;
-          hoursInput.value = hours.toFixed(2);
-          const subtotalEl = row.querySelector(".pers-subtotal");
-          if(subtotalEl) subtotalEl.textContent = (hours*rate).toFixed(2);
-      }
-  }
 
   // ---------- SUMMARY ----------
   function updateSummary(){
