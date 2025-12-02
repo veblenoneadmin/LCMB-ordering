@@ -340,126 +340,146 @@ ob_start();
 
 <!-- JS -->
 <script>
-// ---------- UTILS ----------
-function parseFloatSafe(v){ return parseFloat(v)||0; }
-
-// ---------- SUBTOTALS ----------
-function updateRowSubtotal(row){
-    const input=row.querySelector(".qty-input");
-    if(!input) return;
-    const price=parseFloatSafe(input.dataset.price||input.dataset.rate);
-    const qty=parseFloatSafe(input.value);
-    const subtotalEl=row.querySelector(".row-subtotal, .equip-subtotal");
-    if(subtotalEl) subtotalEl.textContent=(qty*price).toFixed(2);
-}
-
-// ---------- PERSONNEL ----------
-function updatePersonnelHours(pid){
-    const start=document.querySelector(`input[name="personnel_start[${pid}]"]`)?.value;
-    const end=document.querySelector(`input[name="personnel_end[${pid}]"]`)?.value;
-    const rate=parseFloatSafe(document.querySelector(`tr[data-id="${pid}"] .pers-rate`)?.textContent);
-    if(start && end){
-        const t1=new Date(`2000-01-01 ${start}`);
-        const t2=new Date(`2000-01-01 ${end}`);
-        let hours=(t2-t1)/(1000*60*60);
-        if(hours<0) hours=0;
-        document.querySelector(`input[name="personnel_hours[${pid}]"]`).value=hours.toFixed(2);
-        const subtotalEl=document.getElementById(`subtotal-${pid}`);
-        if(subtotalEl) subtotalEl.textContent=(hours*rate).toFixed(2);
-    }
-}
-
-// ---------- SUMMARY ----------
-function updateSummary(){
-    let subtotal=0;
-    document.querySelectorAll(".row-subtotal, .equip-subtotal").forEach(el=>subtotal+=parseFloatSafe(el.textContent));
-    document.querySelectorAll("input[name^='personnel_hours']").forEach(inp=>{
-        const pid=inp.name.match(/\[(\d+)\]/)[1];
-        const rate=parseFloatSafe(document.querySelector(`tr[data-id="${pid}"] .pers-rate`)?.textContent);
-        subtotal+=parseFloatSafe(inp.value)*rate;
-    });
-    document.querySelectorAll(".other-exp-amount").forEach(inp=>subtotal+=parseFloatSafe(inp.value));
-    const tax=subtotal*0.10;
-    const grand=subtotal+tax;
-    document.getElementById("subtotalDisplay").textContent=subtotal.toFixed(2);
-    document.getElementById("taxDisplay").textContent=tax.toFixed(2);
-    document.getElementById("grandDisplay").textContent=grand.toFixed(2);
-}
-
-// ---------- EVENT LISTENERS ----------
 document.addEventListener("DOMContentLoaded", function(){
-    document.querySelectorAll(".qty-input").forEach(input=>{
-        input.addEventListener("input", ()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });
-    });
-    document.querySelectorAll(".personnel-start, .personnel-end").forEach(input=>{
-        input.addEventListener("change", ()=>{ const pid=input.dataset.id; updatePersonnelHours(pid); updateSummary(); });
-    });
-    document.addEventListener("input", function(e){ if(e.target.classList.contains("other-exp-amount")) updateSummary(); });
 
-    // INITIAL CALC
-    document.querySelectorAll("tr").forEach(updateRowSubtotal);
-    document.querySelectorAll("input[name^='personnel_hours']").forEach(inp=>{
-        const pid=inp.name.match(/\[(\d+)\]/)[1];
-        updatePersonnelHours(pid);
-    });
-    updateSummary();
-});
+  // ---------- UTILS ----------
+  function parseFloatSafe(v){ return parseFloat(v)||0; }
 
-// Universal plus/minus handler
-document.querySelectorAll('.qbtn, .qtbn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    // find the nearest input element (qty, hours, etc.)
-    const input = btn.closest('td, div').querySelector('input');
-    if(!input) return;
-    let val = parseFloat(input.value) || 0;
-
-    if(btn.classList.contains('plus') || btn.classList.contains('split-plus') || btn.classList.contains('ducted-plus') || btn.classList.contains('hour-plus') || btn.classList.contains('equip-plus')){
-      val++;
-    } else if(btn.classList.contains('minus') || btn.classList.contains('split-minus') || btn.classList.contains('ducted-minus') || btn.classList.contains('hour-minus') || btn.classList.contains('equip-minus')){
-      val = Math.max(0,val-1);
-    }
-
-    input.value = val;
-    updateSummary(); // update totals immediately
-  });
-});
-
-  // toggle personnel extra
-  document.querySelectorAll('.personnel-row').forEach(row=>{
-    row.addEventListener('click',e=>{
-      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
-      const extra=document.getElementById('extra-'+row.dataset.id);
-      extra.classList.toggle('hidden');
-    });
-  });
-
-  // live search
-  function simpleSearch(inputId, tableSelector, cellSelector){
-    const input=document.getElementById(inputId); if(!input)return;
-    input.addEventListener('input',()=>{
-      const q=input.value.trim().toLowerCase();
-      document.querySelectorAll(tableSelector+' tbody tr').forEach(row=>{
-        const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
-        row.style.display=text.indexOf(q)===-1?'none':'';
-      });
-    });
+  // ---------- ROW SUBTOTAL ----------
+  function updateRowSubtotal(row){
+      const input = row.querySelector(".qty-input");
+      if(!input) return;
+      const price = parseFloatSafe(input.dataset.price||input.dataset.rate);
+      const qty = parseFloatSafe(input.value);
+      const subtotalEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+      if(subtotalEl) subtotalEl.textContent = (qty*price).toFixed(2);
   }
 
-// ---------- OTHER EXPENSES ----------
-let expenseCounter=0;
-document.getElementById("addExpenseBtn").addEventListener("click", function(){
-    const container=document.getElementById("otherExpensesContainer");
-    const div=document.createElement("div");
-    div.className="flex gap-2 mb-2";
-    div.innerHTML=`
-        <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
-        <input type="number" name="other_expense_amount[]" value="0" class="input other-exp-amount w-24" step="0.01" min="0">
-        <button type="button" class="qbtn remove-expense">X</button>
-    `;
-    container.appendChild(div);
-    div.querySelector(".remove-expense").addEventListener("click", ()=>{ div.remove(); updateSummary(); });
+  // ---------- PERSONNEL HOURS ----------
+  function updatePersonnelHours(pid){
+      const startInput = document.querySelector(`input[name="personnel_start[${pid}]"]`);
+      const endInput = document.querySelector(`input[name="personnel_end[${pid}]"]`);
+      const hoursInput = document.querySelector(`input[name="personnel_hours[${pid}]"]`);
+      const row = document.querySelector(`tr[data-id="${pid}"]`);
+      const rate = parseFloatSafe(row?.querySelector(".pers-rate")?.textContent);
+
+      if(startInput && endInput && hoursInput){
+          const start = startInput.value;
+          const end = endInput.value;
+          if(start && end){
+              const t1 = new Date(`2000-01-01T${start}`);
+              const t2 = new Date(`2000-01-01T${end}`);
+              let hours = (t2 - t1)/(1000*60*60);
+              if(hours<0) hours = 0;
+              hoursInput.value = hours.toFixed(2);
+              const subtotalEl = row.querySelector(".pers-subtotal");
+              if(subtotalEl) subtotalEl.textContent = (hours*rate).toFixed(2);
+          }
+      }
+  }
+
+  // ---------- SUMMARY ----------
+  function updateSummary(){
+      let subtotal=0;
+
+      // Qty-based rows
+      document.querySelectorAll("tr").forEach(row=>{
+          const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+          if(subEl) subtotal += parseFloatSafe(subEl.textContent);
+      });
+
+      // Other expenses
+      document.querySelectorAll(".other-exp-amount").forEach(inp=> subtotal+=parseFloatSafe(inp.value));
+
+      const tax = subtotal*0.10;
+      const grand = subtotal+tax;
+
+      document.getElementById("subtotalDisplay").textContent = subtotal.toFixed(2);
+      document.getElementById("taxDisplay").textContent = tax.toFixed(2);
+      document.getElementById("grandDisplay").textContent = grand.toFixed(2);
+  }
+
+  // ---------- PLUS / MINUS BUTTONS ----------
+  document.querySelectorAll(".qbtn, .qtbn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+          const input = btn.closest("td, div").querySelector("input");
+          if(!input) return;
+          let val = parseFloat(input.value) || 0;
+          if(btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("hour-plus") || btn.classList.contains("equip-plus")){
+              val++;
+          } else if(btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("hour-minus") || btn.classList.contains("equip-minus")){
+              val = Math.max(0,val-1);
+          }
+          input.value = val;
+          const row = input.closest("tr");
+          updateRowSubtotal(row);
+          updateSummary();
+      });
+  });
+
+  // ---------- PERSONNEL EVENTS ----------
+  document.querySelectorAll(".personnel-start, .personnel-end").forEach(input=>{
+      const pid = input.dataset.id;
+      input.addEventListener("change", ()=>{
+          updatePersonnelHours(pid);
+          updateSummary();
+      });
+  });
+
+  // Toggle personnel extra rows
+  document.querySelectorAll(".personnel-row").forEach(row=>{
+      row.addEventListener("click", e=>{
+          if(e.target.tagName==="INPUT" || e.target.tagName==="BUTTON") return;
+          const extra = document.getElementById("extra-"+row.dataset.id);
+          extra?.classList.toggle("hidden");
+      });
+  });
+
+  // ---------- OTHER EXPENSES ----------
+  document.getElementById("addExpenseBtn").addEventListener("click", function(){
+      const container = document.getElementById("otherExpensesContainer");
+      const div = document.createElement("div");
+      div.className = "flex gap-2 mb-2";
+      div.innerHTML = `
+          <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
+          <input type="number" name="other_expense_amount[]" value="0" class="input other-exp-amount w-24" step="0.01" min="0">
+          <button type="button" class="qbtn remove-expense">X</button>
+      `;
+      container.appendChild(div);
+      div.querySelector(".remove-expense").addEventListener("click", ()=>{
+          div.remove();
+          updateSummary();
+      });
+      div.querySelector(".other-exp-amount").addEventListener("input", updateSummary);
+  });
+
+  // ---------- LIVE SEARCH ----------
+  function simpleSearch(inputId, tableSelector, cellSelector){
+      const input=document.getElementById(inputId); if(!input) return;
+      input.addEventListener("input", ()=>{
+          const q=input.value.trim().toLowerCase();
+          document.querySelectorAll(tableSelector+" tbody tr").forEach(row=>{
+              const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
+              row.style.display = text.includes(q)?'':'none';
+          });
+      });
+  }
+  simpleSearch("productSearch",".products-table","td.product-name");
+  simpleSearch("splitSearch","#splitTable","td");
+  simpleSearch("personnelSearch",".products-table","td");
+  simpleSearch("equipmentSearch",".products-table","td");
+
+  // ---------- INITIAL CALC ----------
+  document.querySelectorAll("tr").forEach(updateRowSubtotal);
+  document.querySelectorAll("input[name^='personnel_hours']").forEach(inp=>{
+      const pid = inp.name.match(/\[(\d+)\]/)[1];
+      updatePersonnelHours(pid);
+  });
+  updateSummary();
+
 });
 </script>
+
 
 
 <?php
