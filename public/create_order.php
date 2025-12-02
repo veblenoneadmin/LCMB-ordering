@@ -269,14 +269,15 @@ ob_start();
           <td class="p-2">
             <input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
           </td>
-          <td class="p-2">
-            <div class="flex justify-center items-center gap-2">
-              <button type="button" class="qtbn minus hour-minus">-</button>
-              <input type="number" min="0" value="0" name="personnel_hours[<?= $pid ?>]" 
-                     class="qty-input text-center" step="0.5" style="width:50px;">
-              <button type="button" class="qtbn plus hour-plus">+</button>
-            </div>
-          </td>
+          <td class="p-2 text-center">
+                    <div class="qty-wrapper">
+                        <button type="button" class="qtbn hour-minus">-</button>
+                        <input type="number" min="0" value="0"
+                               name="personnel_hours[<?= $pid ?>]"
+                               class="qty-input pers-hours" data-rate="<?= $p['rate'] ?>">
+                        <button type="button" class="qtbn hour-plus">+</button>
+                    </div>
+                </td>
           <td class="p-2">$<span class="pers-subtotal">0.00</span></td>
         </tr>
         <?php endforeach; ?>
