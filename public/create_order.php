@@ -405,26 +405,17 @@ document.addEventListener("DOMContentLoaded", function(){
     updateSummary();
 });
 
-// toggle personnel extra
-  document.querySelectorAll('.personnel-row').forEach(row=>{
-    row.addEventListener('click',e=>{
-      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
-      const extra=document.getElementById('extra-'+row.dataset.id);
-      extra.classList.toggle('hidden');
+// plus/minus buttons
+  document.querySelectorAll('.qbtn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const input=btn.closest('td').querySelector('input');
+      let val=parseFloat(input.value)||0;
+      if(btn.classList.contains('plus')) val++;
+      else if(btn.classList.contains('minus')) val=Math.max(0,val-1);
+      input.value=val;
+      updateSummary();
     });
   });
-
-  // live search
-  function simpleSearch(inputId, tableSelector, cellSelector){
-    const input=document.getElementById(inputId); if(!input)return;
-    input.addEventListener('input',()=>{
-      const q=input.value.trim().toLowerCase();
-      document.querySelectorAll(tableSelector+' tbody tr').forEach(row=>{
-        const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
-        row.style.display=text.indexOf(q)===-1?'none':'';
-      });
-    });
-  }
 
   // toggle personnel extra
   document.querySelectorAll('.personnel-row').forEach(row=>{
