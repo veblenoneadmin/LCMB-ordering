@@ -6,15 +6,7 @@ ob_start();
 ?>
 
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-700">Booking Calendar</h2>
-
-        <select id="calendarFilter" class="p-2 border rounded-lg text-sm">
-            <option value="orders">Orders</option>
-            <option value="personnel">Personnel</option>
-        </select>
-    </div>
-
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">Booking Calendar Test</h2>
     <div id="calendar" class="rounded-lg border"></div>
 </div>
 
@@ -24,53 +16,35 @@ ob_start();
 
 <style>
     #calendar {
-        height: 700px;
-    }
-    .fc .fc-toolbar-title {
-        font-weight: 600;
-        font-size: 1.2rem;
+        height: 700px; /* important so calendar has visible height */
     }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        height: 'auto',
-        themeSystem: 'standard',
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-        events: function(fetchInfo, success, fail) {
-            const filter = document.getElementById('calendarFilter').value;
-            fetch("fetch_" + filter + ".php")
-                .then(res => res.json())
-                .then(data => success(data))
-                .catch(err => {
-                    console.error("Error fetching events:", err);
-                    fail(err);
-                });
-        },
-        eventColor: "#3b82f6",
-        eventTextColor: "#fff",
-        displayEventTime: false,
-        editable: false,
-        selectable: false
+        height: 'auto',
+        events: [
+            { title: 'Test Order', start: '2025-12-02' },
+            { title: 'Test Personnel', start: '2025-12-05' }
+        ],
+        eventColor: '#3b82f6',
+        eventTextColor: '#fff'
     });
 
     calendar.render();
-
-    document.getElementById('calendarFilter').addEventListener('change', () => {
-        calendar.refetchEvents();
-    });
 });
 </script>
 
 <?php
 $content = ob_get_clean();
-renderLayout("Booking Calendar", $content);
+renderLayout("Calendar Test", $content);
 ?>
