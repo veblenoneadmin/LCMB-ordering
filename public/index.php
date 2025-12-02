@@ -15,42 +15,47 @@ ob_start();
         </select>
     </div>
 
-    <div id="calendar"></div>
+    <div id="calendar" class="rounded-lg border"></div>
 </div>
 
 <!-- FullCalendar -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
 
+<style>
+    #calendar {
+        height: 700px;
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    let calendarEl = document.getElementById('calendar');
+    const calendarEl = document.getElementById('calendar');
 
-    let calendar = new FullCalendar.Calendar(calendarEl, {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         height: 'auto',
-        selectable: false,
         themeSystem: 'standard',
-
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-
         events: function(fetchInfo, success, fail) {
-            let filter = document.getElementById('calendarFilter').value;
+            const filter = document.getElementById('calendarFilter').value;
 
-            fetch("public/fetch_" + filter + ".php")
-                .then(r => r.json())
+            // Now relative to public folder
+            fetch("fetch_" + filter + ".php")
+                .then(res => res.json())
                 .then(data => success(data))
                 .catch(err => fail(err));
         },
-
         eventColor: "#3b82f6",
         eventTextColor: "#fff",
         displayEventTime: false,
+        editable: false,
+        selectable: false
     });
 
     calendar.render();
@@ -63,5 +68,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <?php
 $content = ob_get_clean();
-renderLayout("Calendar", $content);
+renderLayout("Booking Calendar", $content);
 ?>
