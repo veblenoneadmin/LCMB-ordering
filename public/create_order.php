@@ -285,6 +285,7 @@ ob_start();
   </div>
 </div>
 
+
 <!-- EQUIPMENT -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
 <div class="flex items-center justify-between mb-3">
@@ -387,46 +388,32 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   // ---------- PLUS / MINUS BUTTONS ----------
-document.querySelectorAll(".qbtn, .qtbn").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-        const input = btn.closest("td, div").querySelector("input");
-        if(!input) return;
+  document.querySelectorAll(".qbtn, .qtbn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+          const input = btn.closest("td, div").querySelector("input");
+          if(!input) return;
+          let val = parseFloat(input.value) || 0;
 
-        let val = parseFloat(input.value) || 0;
+          // Personnel hours plus/minus increments by 0.5
+          if(btn.classList.contains("hour-plus")) val++;
+          else if(btn.classList.contains("hour-minus")) val = Math.max(0,val-1);
+          // Other quantities increment by 1
+          else if(btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus")) val++;
+          else if(btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus")) val = Math.max(0,val-1);
 
-        if (
-            btn.classList.contains("plus") ||
-            btn.classList.contains("split-plus") ||
-            btn.classList.contains("ducted-plus") ||
-            btn.classList.contains("equip-plus") ||
-            btn.classList.contains("hour-plus")
-        ) {
-            val += 1; // increment by 1
-        } 
-        else if (
-            btn.classList.contains("minus") ||
-            btn.classList.contains("split-minus") ||
-            btn.classList.contains("ducted-minus") ||
-            btn.classList.contains("equip-minus") ||
-            btn.classList.contains("hour-minus")
-        ) {
-            val = Math.max(0, val - 1); // decrement by 1 but not below 0
-        }
+          input.value = val;
+          const row = input.closest("tr");
+          updateRowSubtotal(row);
 
-        input.value = val;
+          // Update personnel subtotal if applicable
+          if(input.name.startsWith("personnel_hours")){
+              const pid = input.name.match(/\[(\d+)\]/)[1];
+              updatePersonnelHours(pid);
+          }
 
-        const row = input.closest("tr");
-        updateRowSubtotal(row);
-
-        // Special case: personnel hours
-        if (input.name.startsWith("personnel_hours")) {
-            const pid = input.name.match(/\[(\d+)\]/)[1];
-            updatePersonnelHours(pid);
-        }
-
-        updateSummary();
-    });
-});
+          updateSummary();
+      });
+  });
 
   // ---------- PERSONNEL EVENTS ----------
   document.querySelectorAll(".personnel-start, .personnel-end").forEach(input=>{
