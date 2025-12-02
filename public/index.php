@@ -26,11 +26,14 @@ ob_start();
     #calendar {
         height: 700px;
     }
+    .fc .fc-toolbar-title {
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
     const calendarEl = document.getElementById('calendar');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -44,12 +47,13 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         events: function(fetchInfo, success, fail) {
             const filter = document.getElementById('calendarFilter').value;
-
-            // Now relative to public folder
             fetch("fetch_" + filter + ".php")
                 .then(res => res.json())
                 .then(data => success(data))
-                .catch(err => fail(err));
+                .catch(err => {
+                    console.error("Error fetching events:", err);
+                    fail(err);
+                });
         },
         eventColor: "#3b82f6",
         eventTextColor: "#fff",

@@ -16,6 +16,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
 
+
     <style>
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
         .sidebar-link { display:flex; align-items:center; padding-top:5px; gap:12px; border-radius:8px;
