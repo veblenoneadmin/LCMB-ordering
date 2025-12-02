@@ -17,6 +17,26 @@ $message = '';
  */
 function f2($v){ return number_format((float)$v, 2, '.', ''); }
 
+/**
+ * Helper: compute hours from H:i strings, handle wrap-midnight
+ * returns decimal hours (float)
+ */
+function compute_hours_from_times(?string $startTime, ?string $endTime): float {
+    if (!$startTime || !$endTime) return 0.0;
+    // expected format "HH:MM"
+    $s = DateTime::createFromFormat('H:i', $startTime);
+    $e = DateTime::createFromFormat('H:i', $endTime);
+    if (!$s || !$e) return 0.0;
+    $diff = $s->diff($e);
+    $hours = $diff->h + ($diff->i / 60.0);
+    // if end is before start, treat as wrap-midnight
+    if ($diff->invert === 1) {
+        // invert flag means start > end, compute as 24 - hours
+        $hours = 24 - $hours;
+    }
+    return round((float)$hours, 2);
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST'){
     // Collect customer data
     $customer_name = trim($_POST['customer_name'] ?? '');
@@ -81,6 +101,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     // PERSONNEL
+    // We expect hidden numeric hours inputs named personnel[ID] (set by JS from time_start/time_end)
     foreach($_POST['personnel'] ?? [] as $pid => $hours){
         $hours = floatval($hours);
         if($hours>0){
@@ -148,26 +169,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pdo->beginTransaction();
 
         // Insert into orders table.
-        // Columns present in your DB: (id, customer_name, customer_email, job_address, total_amount, order_number, status, total, tax, discount, created_at, contact_number, appointment_date)
        $stmt = $pdo->prepare(
     "INSERT INTO orders (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
 );
 
-$stmt->execute([
-    $customer_name,
-    $customer_email,
-    $contact_number,
-    $job_address,
-    $appointment_date,
-    f2($subtotal),
-    $order_number,
-    'pending',
-    f2($grand_total),
-    f2($tax),
-    f2($discount)
-]);
-
+        $stmt->execute([
+            $customer_name,
+            $customer_email,
+            $contact_number,
+            $job_address,
+            $appointment_date,
+            f2($subtotal),
+            $order_number,
+            'pending',
+            f2($grand_total),
+            f2($tax),
+            f2($discount)
+        ]);
 
         $order_id = $pdo->lastInsertId();
 
@@ -187,6 +206,27 @@ $stmt->execute([
                 $qty,
                 $price
             ]);
+        }
+
+        // Save dispatch schedule (separate table)
+        // Expect arrays:
+        // personnel_date[pid], time_start[pid], time_end[pid]
+        if (!empty($_POST['personnel_date']) && is_array($_POST['personnel_date'])) {
+            $stmt_dispatch = $pdo->prepare("INSERT INTO dispatch (order_id, personnel_id, date, time_start, time_end, hours) VALUES (?, ?, ?, ?, ?, ?)");
+            foreach ($_POST['personnel_date'] as $pid => $date) {
+                $pid = (int)$pid;
+                $date = trim($date);
+                $time_start = $_POST['time_start'][$pid] ?? null;
+                $time_end   = $_POST['time_end'][$pid] ?? null;
+
+                if ($date && $time_start && $time_end) {
+                    $hours = compute_hours_from_times($time_start, $time_end);
+                    // only insert if hours > 0
+                    if ($hours > 0) {
+                        $stmt_dispatch->execute([$order_id, $pid, $date, $time_start, $time_end, f2($hours)]);
+                    }
+                }
+            }
         }
 
         $pdo->commit();
@@ -317,35 +357,62 @@ ob_start();
         </div>
 
         <!-- PERSONNEL -->
-        <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-            <div class="flex items-center justify-between mb-3">
-                <span class="font-medium text-gray-700">Personnel</span>
-                <input id="personnelSearch" class="search-input" placeholder="Search personnel..." >
-            </div>
-            <div class="overflow-y-auto max-h-64 border rounded-lg">
-                <table class="products-table w-full border-collapse text-sm">
-                    <thead class="bg-gray-100 sticky top-0">
-                        <tr><th class="p-2 text-left">Name</th><th class="p-2 text-center">Rate</th><th class="p-2 text-center">Hours</th><th class="p-2 text-center">Subtotal</th></tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
-                        <tr>
-                            <td><?= htmlspecialchars($p['name']) ?></td>
-                            <td>$<span class="pers-rate"><?= number_format($p['rate'],2) ?></span></td>
-                            <td>
-                                <div class="qty-box">
-                                    <button type="button" class="qbtn hour-minus">-</button>
-                                    <input type="number" min="0" value="0" name="personnel[<?= $pid ?>]" class="qty-input hour-input" data-rate="<?= htmlspecialchars($p['rate']) ?>">
-                                    <button type="button" class="qbtn hour-plus">+</button>
-                                </div>
-                            </td>
-                            <td>$<span class="pers-subtotal">0.00</span></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+    <div class="flex items-center justify-between mb-3">
+        <span class="font-medium text-gray-700">Personnel</span>
+        <input id="personnelSearch" class="search-input" placeholder="Search personnel..." >
+    </div>
+
+    <div class="overflow-y-auto max-h-64 border rounded-lg">
+        <table class="products-table w-full border-collapse text-sm">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="p-2 text-left">Name</th>
+                    <th class="p-2 text-center">Rate</th>
+                    <th class="p-2 text-center">Time Start</th>
+                    <th class="p-2 text-center">Time End</th>
+                    <th class="p-2 text-center">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
+                <tr class="personnel-row cursor-pointer hover:bg-gray-50" data-id="<?= $pid ?>">
+                    <td><?= htmlspecialchars($p['name']) ?></td>
+                    <td>$<span class="pers-rate"><?= number_format($p['rate'],2) ?></span></td>
+                    <td>
+                        <input type="time"
+                               name="time_start[<?= $pid ?>]"
+                               class="time-start w-full border p-1 rounded"
+                               data-pid="<?= $pid ?>">
+                    </td>
+                    <td>
+                        <input type="time"
+                               name="time_end[<?= $pid ?>]"
+                               class="time-end w-full border p-1 rounded"
+                               data-pid="<?= $pid ?>">
+                    </td>
+                    <td>$<span class="pers-subtotal" id="subtotal-<?= $pid ?>">0.00</span></td>
+
+                    <!-- Hidden hours input so existing JS works (name preserved) -->
+                    <input type="hidden" name="personnel[<?= $pid ?>]" value="0" class="qty-input hour-input personnel-hours-input" data-rate="<?= htmlspecialchars($p['rate']) ?>">
+                </tr>
+
+                <!-- Date row -->
+                <tr>
+                    <td colspan="5" class="bg-gray-50 p-3">
+                        <label class="text-xs text-gray-500">Select Date</label>
+                        <input type="date"
+                               name="personnel_date[<?= $pid ?>]"
+                               class="w-full border p-2 rounded">
+                    </td>
+                </tr>
+
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 
         <!-- EQUIPMENT -->
         <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
@@ -436,6 +503,7 @@ ob_start();
 <script>
 (function(){
   function fmt(n){return Number(n||0).toFixed(2);}
+
   function updateSummary(){
     let subtotal=0;
     const summaryEl=document.getElementById('orderSummary');
@@ -445,11 +513,10 @@ ob_start();
       const row = input.closest('tr');
       const val = parseFloat(input.value) || 0;
       if(val > 0){
-        let name = (row.querySelector('td')?.textContent || '').trim();
+        let name = (row?.querySelector('td')?.textContent || '').trim();
         let price = parseFloat(input.dataset.price || input.dataset.rate) || 0;
-        // If personnel row (hour-input) then price may be rate but we display hours and subtotal accordingly
-        if(row.querySelector('.hour-input')){
-          // For personnel we treat price as rate; show hours and show rate*hours
+        // If personnel hidden hour-input exists treat as personnel line
+        if(row && row.querySelector('.personnel-hours-input')) {
           const hours = val;
           const lineTotal = price * hours;
           subtotal += lineTotal;
@@ -491,21 +558,73 @@ ob_start();
     document.getElementById('grandDisplay').textContent = fmt(grand);
   }
 
-  // wire plus/minus and inputs
+  // wire plus/minus and inputs for numeric qty inputs
   document.querySelectorAll('input.qty-input').forEach(input=>{
     input.addEventListener('input', updateSummary);
     const row = input.closest('tr');
-    row.querySelectorAll('.qbtn, .qtbn').forEach(btn=>{
-      btn.addEventListener('click', ()=> {
-        let val = parseFloat(input.value) || 0;
-        if(btn.classList.contains('plus') || btn.classList.contains('split-plus') || btn.classList.contains('ducted-plus') || btn.classList.contains('hour-plus') || btn.classList.contains('equip-plus')) {
-          val++;
-        } else if(btn.classList.contains('minus') || btn.classList.contains('split-minus') || btn.classList.contains('ducted-minus') || btn.classList.contains('hour-minus') || btn.classList.contains('equip-minus')) {
-          val = Math.max(0, val-1);
-        }
-        input.value = val;
-        updateSummary();
+    if(row){
+      row.querySelectorAll('.qbtn, .qtbn').forEach(btn=>{
+        btn.addEventListener('click', ()=> {
+          let val = parseFloat(input.value) || 0;
+          if(btn.classList.contains('plus') || btn.classList.contains('split-plus') || btn.classList.contains('ducted-plus') || btn.classList.contains('hour-plus') || btn.classList.contains('equip-plus')) {
+            val++;
+          } else if(btn.classList.contains('minus') || btn.classList.contains('split-minus') || btn.classList.contains('ducted-minus') || btn.classList.contains('hour-minus') || btn.classList.contains('equip-minus')) {
+            val = Math.max(0, val-1);
+          }
+          input.value = val;
+          updateSummary();
+        });
       });
+    }
+  });
+
+  // personnel row toggle (keeps behavior similar to before, but we don't require click to open time inputs)
+  document.querySelectorAll(".personnel-row").forEach(row => {
+    row.addEventListener("click", function(e) {
+        // ignore clicks on inputs/buttons
+        if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON" || e.target.tagName === "SELECT") return;
+        const id = this.dataset.id;
+        // find the next date row and toggle highlight (not hiding fields now)
+        const dateRow = this.parentElement.querySelector(`input[name='personnel_date[${id}]']`);
+        if(dateRow) {
+          // focus date as a simple visual interaction
+          dateRow.focus();
+        }
+    });
+  });
+
+  // time inputs: compute hours and update hidden hour-input & subtotal cell
+  function computeHoursFromStrings(start, end) {
+    if(!start || !end) return 0;
+    // create Date objects on epoch day
+    const s = new Date(`1970-01-01T${start}:00`);
+    const e = new Date(`1970-01-01T${end}:00`);
+    let diffMs = e - s;
+    if (diffMs < 0) diffMs += 24 * 3600 * 1000; // wrap midnight
+    const hours = diffMs / (1000 * 60 * 60);
+    return Math.round(hours * 100) / 100;
+  }
+
+  document.querySelectorAll('.time-start, .time-end').forEach(input=>{
+    input.addEventListener('change', function(){
+      const pid = this.dataset.pid;
+      const start = document.querySelector(`input[name="time_start[${pid}]"]`).value;
+      const end = document.querySelector(`input[name="time_end[${pid}]"]`).value;
+      const rateEl = document.querySelector(`.personnel-row[data-id='${pid}'] .pers-rate`);
+      const rate = rateEl ? parseFloat(rateEl.textContent) : 0;
+
+      const hours = computeHoursFromStrings(start, end);
+      // update hidden hour input (name preserved so server receives personnel[pid])
+      const hiddenHourInput = document.querySelector(`input[name="personnel[${pid}]"]`);
+      if(hiddenHourInput){
+        hiddenHourInput.value = hours.toFixed(2);
+        // update subtotal cell
+        const subtotalEl = document.getElementById(`subtotal-${pid}`);
+        if(subtotalEl){
+          subtotalEl.textContent = (hours * rate).toFixed(2);
+        }
+        updateSummary();
+      }
     });
   });
 
@@ -542,17 +661,7 @@ ob_start();
   simpleSearch('personnelSearch', '.products-table', 'td');
   simpleSearch('equipmentSearch', '.products-table', 'td');
 
-  // PROFIT SUMMARY (JS — no PHP needed)
-let profit = subtotal * 0.30;
-let netProfitPercent = subtotal > 0 ? ((profit - gstAmount) / subtotal) * 100 : 0;
-let profitMargin = (profit / subtotal) * 100;
-let totalProfit = profit;
-
-document.getElementById('profitDisplay').textContent = profit.toFixed(2);
-document.getElementById('netProfitDisplay').textContent = netProfitPercent.toFixed(2);
-document.getElementById('profitMarginDisplay').textContent = isFinite(profitMargin) ? profitMargin.toFixed(2) : "0.00";
-document.getElementById('totalProfitDisplay').textContent = totalProfit.toFixed(2);
-
+  // (optional) profit card logic left inactive because server computes profit/reporting on review page
 
 })();
 </script>
