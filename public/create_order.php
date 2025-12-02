@@ -265,9 +265,9 @@ ob_start();
         <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
         <tr data-id="<?= $pid ?>" class="border-b text-center">
           <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
-          <td class="p-2"><?= htmlspecialchars($p['role'] ?? 'Technician') ?></td>
-          <td class="p-2">
-            <input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
+          <td class="p-2 text-center"><?= htmlspecialchars($p['role'] ?? 'Technician') ?></td>
+          <td class="p-2 text-center">
+            <input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
           </td>
           <td class="p-2 text-center">
                     <div class="qty-wrapper">
