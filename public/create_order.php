@@ -101,15 +101,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $stmt_item->execute([$order_id,$it['item_type'],$it['item_id']??null,$it['installation_type']??null,(int)$it['qty'],f2($it['price'])]);
         }
 
-        // DISPATCH TABLE (PERSONNEL)
-        $stmt_dispatch=$pdo->prepare("INSERT INTO dispatch (order_id,personnel_id,date,time_start,time_end,hours,created_at) VALUES (?,?,?,?,?,?,NOW())");
-        foreach($_POST['personnel']??[] as $pid=>$ignore){
-            $date=$_POST['personnel_date'][$pid]??null;
-            $start=$_POST['personnel_start'][$pid]??null;
-            $end=$_POST['personnel_end'][$pid]??null;
-            $hours=$_POST['personnel_hours'][$pid]??0;
-            if($date && $start && $end){
-                $stmt_dispatch->execute([$order_id,$pid,$date,$start,$end,floatval($hours)]);
+        // PERSONNEL / DISPATCH
+        foreach($_POST['personnel_date'] ?? [] as $pid=>$date){
+            $date = $date ?: null;
+            $time_start = $_POST['personnel_time_start'][$pid] ?? null;
+            $time_end = $_POST['personnel_time_end'][$pid] ?? null;
+
+            if($date && $time_start && $time_end){
+                // compute hours
+                $start = new DateTime($time_start);
+                $end = new DateTime($time_end);
+                $interval = $start->diff($end);
+                $hours = $interval->h + ($interval->i/60);
+                $hours = round($hours,2);
+
+                $stmt_dispatch = $pdo->prepare("INSERT INTO dispatch (order_id, personnel_id, date, time_start, time_end, hours, created_at) VALUES (?,?,?,?,?,?,NOW())");
+                $stmt_dispatch->execute([$order_id,$pid,$date,$time_start,$time_end,$hours]);
             }
         }
 
@@ -397,6 +404,48 @@ document.addEventListener("DOMContentLoaded", function(){
     });
     updateSummary();
 });
+
+// toggle personnel extra
+  document.querySelectorAll('.personnel-row').forEach(row=>{
+    row.addEventListener('click',e=>{
+      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+      const extra=document.getElementById('extra-'+row.dataset.id);
+      extra.classList.toggle('hidden');
+    });
+  });
+
+  // live search
+  function simpleSearch(inputId, tableSelector, cellSelector){
+    const input=document.getElementById(inputId); if(!input)return;
+    input.addEventListener('input',()=>{
+      const q=input.value.trim().toLowerCase();
+      document.querySelectorAll(tableSelector+' tbody tr').forEach(row=>{
+        const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
+        row.style.display=text.indexOf(q)===-1?'none':'';
+      });
+    });
+  }
+
+  // toggle personnel extra
+  document.querySelectorAll('.personnel-row').forEach(row=>{
+    row.addEventListener('click',e=>{
+      if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+      const extra=document.getElementById('extra-'+row.dataset.id);
+      extra.classList.toggle('hidden');
+    });
+  });
+
+  // live search
+  function simpleSearch(inputId, tableSelector, cellSelector){
+    const input=document.getElementById(inputId); if(!input)return;
+    input.addEventListener('input',()=>{
+      const q=input.value.trim().toLowerCase();
+      document.querySelectorAll(tableSelector+' tbody tr').forEach(row=>{
+        const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
+        row.style.display=text.indexOf(q)===-1?'none':'';
+      });
+    });
+  }
 
 // ---------- OTHER EXPENSES ----------
 let expenseCounter=0;
