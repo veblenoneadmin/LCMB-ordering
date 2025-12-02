@@ -41,6 +41,15 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         .qty-wrapper { display: flex; align-items: center; gap: 4px !important; /* very small gap */ }
         .pers-check { transform:scale(0.9); }
         #appointment_date::placeholder { color:#999; opacity:1; }
+        /* FullCalendar container default styling */
+    #calendar {
+        height: 700px;
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-top: 10px;
+    }
     </style>
 </head>
 
@@ -209,6 +218,8 @@ document.getElementById("closeTaxModal")?.addEventListener("click", () => {
     document.getElementById("taxModal").classList.add("hidden");
 });
 </script>
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
 
 </body>
 </html>
