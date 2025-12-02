@@ -251,7 +251,7 @@ ob_start();
 <input id="personnelSearch" class="search-input" placeholder="Search personnel..." >
 </div>
 <div class="overflow-y-auto max-h-64 border rounded-lg">
-<table class="products-table w-full border-collapse text-sm">
+<table class="products-table personnel-table w-full border-collapse text-sm">
 <thead class="bg-gray-100 sticky top-0">
 <tr><th>Name</th><th>Rate</th><th>Date</th><th>Time In</th><th>Time Out</th><th>Hours</th><th>Subtotal</th></tr>
 </thead>
@@ -263,8 +263,11 @@ ob_start();
 <td><input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date"></td>
 <td><input type="time" name="personnel_start[<?= $pid ?>]" data-id="<?= $pid ?>" class="personnel-start"></td>
 <td><input type="time" name="personnel_end[<?= $pid ?>]" data-id="<?= $pid ?>" class="personnel-end"></td>
-<td><input type="hidden" name="personnel_hours[<?= $pid ?>]" value="0"><?= '0.00' ?></td>
-<td>$<span id="subtotal-<?= $pid ?>">0.00</span></td>
+<td><input type="hidden" name="personnel_hours[<?= $pid ?>]" value="0">0.00</td>
+<td>
+  $<span id="subtotal-<?= $pid ?>" class="pers-subtotal">0.00</span>
+  <input type="hidden" name="personnel_hours[<?= $pid ?>]" value="0">
+</td>
 </tr>
 <?php endforeach; ?>
 </tbody>
