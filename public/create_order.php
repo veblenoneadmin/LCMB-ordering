@@ -395,5 +395,5 @@ document.getElementById('addExpenseBtn').addEventListener('click',()=>{
 
 <?php
 $content = ob_get_clean();
-renderLayout($content, 'Create Order');
+renderLayout($content,'Create Order','create_order'); // Pass proper args
 ?>
