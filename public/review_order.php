@@ -209,6 +209,12 @@ ob_start();
         </div>
 
         <!-- SEND TO SERVICEM8 / N8N -->
+        <!-- SEND EMAIL BUTTON -->
+        <button type="button" id="openEmailModal" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
+            Send to Email
+        </button>
+
+        
         <form method="post" action="send_order.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
@@ -227,7 +233,60 @@ ob_start();
 
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const openBtn = document.getElementById('openEmailModal');
+    const modal = document.getElementById('emailModal');
+    const modalContent = document.getElementById('emailModalContent');
+    const closeBtn = document.getElementById('closeEmailModal');
+
+    openBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        void modalContent.offsetWidth; // trigger reflow
+        modal.classList.add('show');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+});
+</script>
+
+
 <?php
 $content = ob_get_clean();
 renderLayout("Review Order", $content, "orders");
 ?>
+
+<!-- EMAIL MODAL -->
+<div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
+    <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out" id="emailModalContent">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
+
+        <form method="post" action="send_email.php" id="emailForm">
+            <input type="hidden" name="order_id" value="<?= $order_id ?>">
+
+            <div class="mb-3">
+                <label class="block text-gray-600 font-medium mb-1">To:</label>
+                <input type="email" name="recipient" class="w-full border rounded-xl p-2" placeholder="recipient@example.com" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-gray-600 font-medium mb-1">Subject:</label>
+                <input type="text" name="subject" class="w-full border rounded-xl p-2" placeholder="Email Subject" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-gray-600 font-medium mb-1">Message:</label>
+                <textarea name="message" rows="5" class="w-full border rounded-xl p-2" placeholder="Email message..." required></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" id="closeEmailModal" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Send Email</button>
+            </div>
+        </form>
+    </div>
+</div>
+
