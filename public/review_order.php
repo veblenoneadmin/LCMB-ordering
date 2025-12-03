@@ -52,10 +52,12 @@ foreach ($itemsRaw as $item) {
             }
             break;
         case 'personnel':
-            $stmtName = $pdo->prepare("SELECT name FROM personnel WHERE id=?");
+            $stmtName = $pdo->prepare("SELECT name, hourly_rate FROM personnel WHERE id=?");
             $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?? 'Unknown Personnel';
-            $groupedItems['personnel'][] = array_merge($item, ['name'=>$name]);
+            $row = $stmtName->fetch(PDO::FETCH_ASSOC);
+            $name = $row['name'] ?? 'Unknown Personnel';
+            $price = $row['hourly_rate'] ?? 0;
+            $groupedItems['personnel'][] = array_merge($item, ['name'=>$name, 'price'=>$price]);
             break;
         case 'equipment':
             $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
@@ -79,8 +81,19 @@ $total_cost = 0;
 
 foreach ($itemsRaw as $item) {
     $qty = $item['qty'] ?? 1;
-    $price = $item['price'] ?? 0;
-    $cost = $item['cost'] ?? ($price * 0.7); // Default cost = 70% of price
+
+    switch ($item['item_type'] ?? '') {
+        case 'personnel':
+            $stmtName = $pdo->prepare("SELECT hourly_rate FROM personnel WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $price = $stmtName->fetchColumn() ?? 0;
+            $cost = $price * 0.7; // Example cost
+            break;
+        default:
+            $price = $item['price'] ?? 0;
+            $cost = $item['cost'] ?? ($price * 0.7);
+            break;
+    }
 
     $subtotal += $price * $qty;
     $total_cost += $cost * $qty;
@@ -143,13 +156,14 @@ ob_start();
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($groupedItems[$key] as $item): 
-                            $item_sub = $item['price'] * $item['qty'];
+                        <?php foreach ($groupedItems[$key] as $item):
+                            $item_price = $item['price'] ?? 0;
+                            $item_sub = $item_price * ($item['qty'] ?? 1);
                         ?>
                             <tr class="border-t hover:bg-gray-50">
                                 <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
-                                <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
-                                <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
+                                <td class="px-4 py-3 text-center"><?= number_format($item_price, 2) ?></td>
+                                <td class="px-4 py-3 text-center"><?= $item['qty'] ?? 1 ?></td>
                                 <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
@@ -208,13 +222,18 @@ ob_start();
             </div>
         </div>
 
-        <!-- SEND TO SERVICEM8 / N8N -->
         <!-- SEND EMAIL BUTTON -->
-        <button type="button" id="openEmailModal" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
+        <button 
+            type="button" 
+            id="openEmailModal" 
+            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
+            data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+            data-order-id="<?= $order_id ?>"
+            data-grand-total="<?= number_format($grand_total, 2) ?>">
             Send to Email
         </button>
 
-        
+        <!-- SEND TO N8N -->
         <form method="post" action="send_order.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
@@ -222,6 +241,7 @@ ob_start();
             </button>
         </form>
 
+        <!-- SEND TO ServiceM8 -->
         <form method="post" action="send_minimal.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
@@ -231,6 +251,7 @@ ob_start();
 
     </div>
 </div>
+
 <!-- EMAIL MODAL -->
 <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
@@ -269,7 +290,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalContent = document.getElementById('emailModalContent');
     const closeBtn = document.getElementById('closeEmailModal');
 
+    const emailInput = document.querySelector('#emailForm input[name="recipient"]');
+    const subjectInput = document.querySelector('#emailForm input[name="subject"]');
+    const messageInput = document.querySelector('#emailForm textarea[name="message"]');
+
     openBtn.addEventListener('click', () => {
+        const clientEmail = openBtn.getAttribute('data-client-email') || '';
+        const orderId = openBtn.getAttribute('data-order-id') || '';
+        const grandTotal = openBtn.getAttribute('data-grand-total') || '0.00';
+
+        emailInput.value = clientEmail;
+        subjectInput.value = `Order #${orderId} Details`;
+        
+        let message = `Hello,\n\nPlease find the details for your order #${orderId}.\n\n`;
+
+        // Add each item type to message
+        <?php foreach ($groupedItems as $type => $items): ?>
+            <?php if (!empty($items)): ?>
+                message += "<?= ucfirst($type) ?>:\n";
+                <?php foreach ($items as $i): ?>
+                    message += "- <?= addslashes($i['name']) ?>: $<?= number_format($i['price'] ?? 0, 2) ?> x <?= $i['qty'] ?? 1 ?> = $<?= number_format(($i['price'] ?? 0) * ($i['qty'] ?? 1), 2) ?>\n";
+                <?php endforeach; ?>
+                message += "\n";
+            <?php endif; ?>
+        <?php endforeach; ?>
+
+        message += `Grand Total: $${grandTotal}\n\nThank you.`;
+
+        messageInput.value = message;
+
+        // Show modal
         modal.classList.remove('hidden');
         setTimeout(() => {
             modalContent.classList.remove('scale-95', 'opacity-0');
@@ -289,5 +339,3 @@ document.addEventListener('DOMContentLoaded', function() {
 $content = ob_get_clean();
 renderLayout("Review Order", $content, "orders");
 ?>
-
-
