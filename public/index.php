@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-// Fetch dispatch data once
+// Fetch dispatch data
 $stmt = $pdo->query("
     SELECT d.id, d.date, d.hours, p.name AS personnel_name
     FROM dispatch d
@@ -10,60 +10,69 @@ $stmt = $pdo->query("
 ");
 $dispatch = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Prepare JS events array
+// Generate events array for JS
 $events = [];
+$colors = ['#3b82f6','#9333ea','#f97316','#059669','#ef4444','#eab308','#8b5cf6','#0ea5e9']; // sample colors
+$personnelColors = [];
+$colorIndex = 0;
+
 foreach ($dispatch as $row) {
+    $person = $row['personnel_name'] ?: 'Unknown';
+    if (!isset($personnelColors[$person])) {
+        $personnelColors[$person] = $colors[$colorIndex % count($colors)];
+        $colorIndex++;
+    }
+
     $events[] = [
-        "title" => $row['personnel_name'] . " (" . $row['hours'] . "h)",
-        "start" => $row['date']
+        "id" => $row['id'],
+        "title" => $person . " (" . $row['hours'] . "h)",
+        "start" => $row['date'],
+        "color" => $personnelColors[$person],
+        "extendedProps" => [
+            "personnel" => $person,
+            "hours" => $row['hours'],
+            "date" => $row['date']
+        ]
     ];
 }
 
 ob_start();
 ?>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.5/dist/fullcalendar.min.css">
-<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.5/dist/fullcalendar.min.js"></script>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
 
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
-    <h2 class="text-xl font-semibold text-gray-700 mb-2">Calendar 3 (FullCalendar v3)</h2>
-    <div id="calendar3"></div>
+    <h2 class="text-xl font-semibold text-gray-700 mb-2">Calendar 4 - Dispatch</h2>
+    <div class="mb-2">
+        <label class="mr-2 font-medium">Filter by Personnel:</label>
+        <select id="personnelFilter" class="p-2 border rounded-lg text-sm">
+            <option value="all">All</option>
+            <?php foreach(array_unique(array_column($dispatch,'personnel_name')) as $person): ?>
+            <option value="<?= htmlspecialchars($person) ?>"><?= htmlspecialchars($person) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div id="calendar" class="rounded-lg border"></div>
 </div>
 
-<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-    <h2 class="text-xl font-semibold text-gray-700 mb-2">Calendar 4 (FullCalendar v5)</h2>
-    <div id="calendar4"></div>
+<!-- Modal -->
+<div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+    <div class="bg-white p-5 rounded-lg w-80 shadow-lg">
+        <h2 class="text-xl font-semibold mb-2" id="modalTitle">Dispatch Details</h2>
+        <p id="modalDate" class="mb-1"></p>
+        <p id="modalPersonnel" class="mb-1"></p>
+        <p id="modalHours"></p>
+        <div class="flex justify-end mt-4">
+            <button id="closeModal" class="px-3 py-2 bg-gray-300 rounded hover:bg-gray-400">Close</button>
+        </div>
+    </div>
 </div>
 
 <script>
-const dispatchEvents = <?= json_encode($events); ?>;
-
-// -------------------------
-// Calendar 3 (FullCalendar v3)
-// -------------------------
-$('#calendar3').fullCalendar({
-    header: {
-        left: 'prev,next today',
-        center: 'title',
-        right: ''
-    },
-    height: 650,
-    editable: false,
-    events: dispatchEvents,
-    eventColor: '#2563eb',
-    eventTextColor: '#fff'
-});
-
-// -------------------------
-// Calendar 4 (FullCalendar v5)
-// -------------------------
 document.addEventListener('DOMContentLoaded', function () {
-    const calendarEl = document.getElementById('calendar4');
+    let allEvents = <?= json_encode($events) ?>;
+    let calendarEl = document.getElementById('calendar');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -71,19 +80,37 @@ document.addEventListener('DOMContentLoaded', function () {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: ''
+            right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-        events: dispatchEvents,
-        eventColor: '#9333ea',
-        eventTextColor: '#fff',
-        displayEventTime: false
+        events: allEvents,
+        displayEventTime: false,
+        eventClick: function(info) {
+            const e = info.event.extendedProps;
+            document.getElementById('modalTitle').innerText = info.event.title;
+            document.getElementById('modalDate').innerText = "Date: " + e.date;
+            document.getElementById('modalPersonnel').innerText = "Personnel: " + e.personnel;
+            document.getElementById('modalHours').innerText = "Hours: " + e.hours;
+            document.getElementById('dispatchModal').classList.remove('hidden');
+        }
     });
 
     calendar.render();
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+        document.getElementById('dispatchModal').classList.add('hidden');
+    });
+
+    // Personnel filter
+    document.getElementById('personnelFilter').addEventListener('change', function() {
+        const val = this.value;
+        let filteredEvents = val === 'all' ? allEvents : allEvents.filter(ev => ev.extendedProps.personnel === val);
+        calendar.removeAllEvents();
+        calendar.addEventSource(filteredEvents);
+    });
 });
 </script>
 
 <?php
 $content = ob_get_clean();
-renderLayout("Dispatch Calendars", $content);
+renderLayout("Dispatch Calendar", $content);
 ?>
