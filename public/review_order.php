@@ -230,38 +230,10 @@ ob_start();
         </form>
 
     </div>
-
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const openBtn = document.getElementById('openEmailModal');
-    const modal = document.getElementById('emailModal');
-    const modalContent = document.getElementById('emailModalContent');
-    const closeBtn = document.getElementById('closeEmailModal');
-
-    openBtn.addEventListener('click', () => {
-        modal.classList.remove('hidden');
-        void modalContent.offsetWidth; // trigger reflow
-        modal.classList.add('show');
-    });
-
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    });
-});
-</script>
-
-
-<?php
-$content = ob_get_clean();
-renderLayout("Review Order", $content, "orders");
-?>
-
 <!-- EMAIL MODAL -->
-<div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
-    <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out" id="emailModalContent">
+<div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
 
         <form method="post" action="send_email.php" id="emailForm">
@@ -289,4 +261,33 @@ renderLayout("Review Order", $content, "orders");
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const openBtn = document.getElementById('openEmailModal');
+    const modal = document.getElementById('emailModal');
+    const modalContent = document.getElementById('emailModalContent');
+    const closeBtn = document.getElementById('closeEmailModal');
+
+    openBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+});
+</script>
+
+<?php
+$content = ob_get_clean();
+renderLayout("Review Order", $content, "orders");
+?>
+
 
