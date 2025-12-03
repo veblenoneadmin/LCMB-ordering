@@ -30,73 +30,75 @@ $groupedItems = [
 
 foreach ($itemsRaw as $item) {
     $name = '';
+    $price = $item['price'] ?? 0;
+    $qty = $item['qty'] ?? 1;
+    $cost = $item['cost'] ?? null;
+
     switch($item['item_type'] ?? '') {
         case 'product':
             $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
             $stmtName->execute([$item['item_id']]);
             $name = $stmtName->fetchColumn() ?? 'Unknown Product';
-            $groupedItems['products'][] = array_merge($item, ['name'=>$name]);
             break;
+
         case 'installation':
             if (($item['installation_type'] ?? '') === 'split') {
                 $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
                 $stmtName->execute([$item['item_id']]);
                 $name = $stmtName->fetchColumn() ?? 'Unknown Split Installation';
-                $groupedItems['split'][] = array_merge($item, ['name'=>$name]);
             } else {
                 $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
                 $stmtName->execute([$item['item_id']]);
                 $name = $stmtName->fetchColumn() ?? 'Unknown Ducted Installation';
                 $name .= ' (' . ($item['installation_type'] ?? '') . ')';
-                $groupedItems['ducted'][] = array_merge($item, ['name'=>$name]);
             }
             break;
+
         case 'personnel':
-            $stmtName = $pdo->prepare("SELECT name, hourly_rate FROM personnel WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
+            // Use technician_uuid instead of id if needed
+            $stmtName = $pdo->prepare("SELECT name, hourly_rate FROM personnel WHERE id=? OR technician_uuid=?");
+            $stmtName->execute([$item['item_id'], $item['item_id']]);
             $row = $stmtName->fetch(PDO::FETCH_ASSOC);
             $name = $row['name'] ?? 'Unknown Personnel';
             $price = $row['hourly_rate'] ?? 0;
-            $groupedItems['personnel'][] = array_merge($item, ['name'=>$name, 'price'=>$price]);
             break;
+
         case 'equipment':
             $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
             $stmtName->execute([$item['item_id']]);
             $name = $stmtName->fetchColumn() ?? 'Unknown Equipment';
-            $groupedItems['equipment'][] = array_merge($item, ['name'=>$name]);
             break;
+
         case 'expense':
         default:
             $name = $item['name'] ?? 'Other Expense';
-            $groupedItems['expense'][] = array_merge($item, ['name'=>$name]);
             break;
     }
+
+    // Calculate cost if not set
+    if ($cost === null) $cost = $price * 0.7;
+
+    // Store item with all info
+    $groupedItems[$item['item_type'] ?? 'expense'][] = array_merge($item, [
+        'name' => $name,
+        'price' => $price,
+        'cost' => $cost,
+        'qty' => $qty
+    ]);
 }
 
 // ==========================
-// CALCULATE SUBTOTALS & PROFIT
+// CALCULATE TOTALS
 // ==========================
 $subtotal = 0;
 $total_cost = 0;
 
-foreach ($itemsRaw as $item) {
-    $qty = $item['qty'] ?? 1;
-
-    switch ($item['item_type'] ?? '') {
-        case 'personnel':
-            $stmtName = $pdo->prepare("SELECT hourly_rate FROM personnel WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $price = $stmtName->fetchColumn() ?? 0;
-            $cost = $price * 0.7; // Example cost
-            break;
-        default:
-            $price = $item['price'] ?? 0;
-            $cost = $item['cost'] ?? ($price * 0.7);
-            break;
+// Loop through all grouped items to calculate subtotal
+foreach ($groupedItems as $type => $items) {
+    foreach ($items as $item) {
+        $subtotal += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
+        $total_cost += ($item['cost'] ?? 0) * ($item['qty'] ?? 1);
     }
-
-    $subtotal += $price * $qty;
-    $total_cost += $cost * $qty;
 }
 
 $tax = round($subtotal * 0.10, 2);
@@ -141,7 +143,17 @@ ob_start();
         </div>
 
         <!-- GROUPED ITEMS -->
-        <?php foreach (['products'=>'Ordered Products', 'split'=>'Split Installations', 'ducted'=>'Ducted Installations', 'personnel'=>'Personnel', 'equipment'=>'Equipment', 'expense'=>'Other Expenses'] as $key => $title): ?>
+        <?php 
+        $titles = [
+            'products'=>'Ordered Products',
+            'split'=>'Split Installations',
+            'ducted'=>'Ducted Installations',
+            'personnel'=>'Personnel',
+            'equipment'=>'Equipment',
+            'expense'=>'Other Expenses'
+        ];
+        ?>
+        <?php foreach ($titles as $key => $title): ?>
             <?php if (!empty($groupedItems[$key])): ?>
             <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
                 <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= $title ?></h3>
@@ -157,12 +169,11 @@ ob_start();
                         </thead>
                         <tbody>
                         <?php foreach ($groupedItems[$key] as $item):
-                            $item_price = $item['price'] ?? 0;
-                            $item_sub = $item_price * ($item['qty'] ?? 1);
+                            $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
                         ?>
                             <tr class="border-t hover:bg-gray-50">
                                 <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
-                                <td class="px-4 py-3 text-center"><?= number_format($item_price, 2) ?></td>
+                                <td class="px-4 py-3 text-center"><?= number_format($item['price'] ?? 0, 2) ?></td>
                                 <td class="px-4 py-3 text-center"><?= $item['qty'] ?? 1 ?></td>
                                 <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
                             </tr>
@@ -178,26 +189,21 @@ ob_start();
 
     <!-- SUMMARY PANEL -->
     <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
-
         <!-- PROFIT CARD -->
         <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
             <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
-
             <div class="flex justify-between text-gray-600 mb-1">
                 <span>Profit:</span>
                 <span>$<?= number_format($profit, 2) ?></span>
             </div>
-
             <div class="flex justify-between text-gray-600 mb-1">
                 <span>Percent Margin:</span>
                 <span><?= number_format($percent_margin, 2) ?>%</span>
             </div>
-
             <div class="flex justify-between text-gray-600 mb-1">
                 <span>Net Profit:</span>
                 <span><?= number_format($net_profit, 2) ?>%</span>
             </div>
-
             <div class="flex justify-between font-semibold text-gray-700">
                 <span>Total Profit:</span>
                 <span>$<?= number_format($total_profit, 2) ?></span>
@@ -210,12 +216,10 @@ ob_start();
                 <span>Subtotal</span>
                 <span><?= number_format($subtotal, 2) ?></span>
             </div>
-
             <div class="flex justify-between text-gray-700">
                 <span>Tax (10%)</span>
                 <span><?= number_format($tax, 2) ?></span>
             </div>
-
             <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
                 <span>Grand Total</span>
                 <span><?= number_format($grand_total, 2) ?></span>
@@ -223,8 +227,7 @@ ob_start();
         </div>
 
         <!-- SEND EMAIL BUTTON -->
-        <button 
-            type="button" 
+        <button type="button" 
             id="openEmailModal" 
             class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
             data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
@@ -233,7 +236,6 @@ ob_start();
             Send to Email
         </button>
 
-        <!-- SEND TO N8N -->
         <form method="post" action="send_order.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
@@ -241,7 +243,6 @@ ob_start();
             </button>
         </form>
 
-        <!-- SEND TO ServiceM8 -->
         <form method="post" action="send_minimal.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
@@ -256,25 +257,20 @@ ob_start();
 <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
-
         <form method="post" action="send_email.php" id="emailForm">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
-
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">To:</label>
                 <input type="email" name="recipient" class="w-full border rounded-xl p-2" placeholder="recipient@example.com" required>
             </div>
-
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">Subject:</label>
                 <input type="text" name="subject" class="w-full border rounded-xl p-2" placeholder="Email Subject" required>
             </div>
-
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">Message:</label>
-                <textarea name="message" rows="5" class="w-full border rounded-xl p-2" placeholder="Email message..." required></textarea>
+                <textarea name="message" rows="8" class="w-full border rounded-xl p-2" placeholder="Email message..." required></textarea>
             </div>
-
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" id="closeEmailModal" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">Cancel</button>
                 <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Send Email</button>
@@ -301,25 +297,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
         emailInput.value = clientEmail;
         subjectInput.value = `Order #${orderId} Details`;
-        
+
         let message = `Hello,\n\nPlease find the details for your order #${orderId}.\n\n`;
 
-        // Add each item type to message
         <?php foreach ($groupedItems as $type => $items): ?>
             <?php if (!empty($items)): ?>
                 message += "<?= ucfirst($type) ?>:\n";
                 <?php foreach ($items as $i): ?>
-                    message += "- <?= addslashes($i['name']) ?>: $<?= number_format($i['price'] ?? 0, 2) ?> x <?= $i['qty'] ?? 1 ?> = $<?= number_format(($i['price'] ?? 0) * ($i['qty'] ?? 1), 2) ?>\n";
+                    message += "- <?= addslashes($i['name']) ?>: $<?= number_format($i['price'], 2) ?> x <?= $i['qty'] ?> = $<?= number_format($i['price'] * $i['qty'], 2) ?>\n";
                 <?php endforeach; ?>
                 message += "\n";
             <?php endif; ?>
         <?php endforeach; ?>
 
         message += `Grand Total: $${grandTotal}\n\nThank you.`;
-
         messageInput.value = message;
 
-        // Show modal
         modal.classList.remove('hidden');
         setTimeout(() => {
             modalContent.classList.remove('scale-95', 'opacity-0');
