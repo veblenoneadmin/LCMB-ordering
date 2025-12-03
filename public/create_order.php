@@ -7,7 +7,7 @@ require_once __DIR__ . '/layout.php';
 try { $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $products=[]; }
 try { $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $split_installations=[]; }
 try { $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $ducted_installations=[]; }
-try { $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $personnel=[]; }
+try { $personnel = $pdo->query("SELECT id, name, rate, role FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); }
 try { $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $equipment=[]; }
 
 $message = '';
@@ -153,9 +153,11 @@ if (!empty($_POST['personnel_hours'])) {
     );
     foreach ($_POST['personnel_hours'] as $pid => $hours) {
         $hours = floatval($hours);
-        $date = $_POST['personnel_date'][$pid] ?? date('Y-m-d');
+        $date = $_POST['personnel_date'][$pid] ?: ($appointment_date ?: date('Y-m-d'));
+
         if ($hours > 0) {
             $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
+            }
         }
     }
 }
@@ -501,6 +503,43 @@ document.querySelectorAll(".qbtn, .qtbn").forEach(btn => {
       });
       div.querySelector(".other-exp-amount").addEventListener("input", updateSummary);
   });
+
+  function updateOrderSummary() {
+    const container = document.getElementById("orderSummary");
+    container.innerHTML = "";
+
+    const rows = document.querySelectorAll("tr");
+    let hasItems = false;
+
+    rows.forEach(row => {
+        const qtyInput = row.querySelector(".qty-input, .pers-hours, .equip-input");
+        const subtotalEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+
+        if (!qtyInput || !subtotalEl) return;
+
+        const qty = parseFloat(qtyInput.value) || 0;
+        const subtotal = parseFloat(subtotalEl.textContent) || 0;
+
+        if (qty > 0) {
+            hasItems = true;
+
+            const name = row.querySelector("td")?.textContent.trim() || "Item";
+
+            const div = document.createElement("div");
+            div.className = "flex justify-between text-sm mb-1";
+            div.innerHTML = `
+                <span>${name} × ${qty}</span>
+                <span>$${subtotal.toFixed(2)}</span>
+            `;
+            container.appendChild(div);
+        }
+    });
+
+    if (!hasItems) {
+        container.innerHTML = `<div class="empty-note">No items selected.</div>`;
+    }
+}
+
 
   // ---------- LIVE SEARCH ----------
   function simpleSearch(inputId, tableSelector, cellSelector){
