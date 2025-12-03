@@ -39,14 +39,11 @@ foreach ($dispatch as $row) {
 ob_start();
 ?>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
-
+<!-- Calendar -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
-    <h2 class="text-xl font-semibold text-gray-700 mb-4">Dispatch Calendar</h2>
-
-    <div class="mb-4 flex items-center gap-3">
-        <label class="font-medium">Filter by Personnel:</label>
+    <h2 class="text-xl font-semibold text-gray-700 mb-2">Dispatch Board</h2>
+    <div class="mb-2">
+        <label class="mr-2 font-medium">Filter by Personnel:</label>
         <select id="personnelFilter" class="p-2 border rounded-lg text-sm">
             <option value="all">All</option>
             <?php foreach(array_unique(array_column($dispatch,'personnel_name')) as $person): ?>
@@ -54,13 +51,12 @@ ob_start();
             <?php endforeach; ?>
         </select>
     </div>
-
     <div id="calendar" class="rounded-lg border"></div>
 </div>
 
 <!-- Modal -->
 <div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-96 max-w-full mx-2 animate-fadeIn">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out" id="dispatchModalContent">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" id="modalTitle">Dispatch Details</h2>
         <div class="space-y-2 text-gray-700 dark:text-gray-300">
             <p id="modalDate" class="text-sm"></p>
@@ -73,17 +69,24 @@ ob_start();
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
 
 <style>
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
-#calendar { height: 650px; }
+/* Fade + Scale In Animation */
+#dispatchModal.show #dispatchModalContent {
+    transform: scale(1);
+    opacity: 1;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     let allEvents = <?= json_encode($events) ?>;
     let calendarEl = document.getElementById('calendar');
+    const modal = document.getElementById('dispatchModal');
+    const modalContent = document.getElementById('dispatchModalContent');
+    const closeBtn = document.getElementById('closeModal');
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -101,14 +104,20 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalDate').innerText = "Date: " + e.date;
             document.getElementById('modalPersonnel').innerText = "Personnel: " + e.personnel;
             document.getElementById('modalHours').innerText = "Hours: " + e.hours;
-            document.getElementById('dispatchModal').classList.remove('hidden');
+            
+            // Open modern modal
+            modal.classList.remove('hidden');
+            void modalContent.offsetWidth; // trigger reflow
+            modal.classList.add('show');
         }
     });
 
     calendar.render();
 
-    document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('dispatchModal').classList.add('hidden');
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
     // Personnel filter
@@ -123,5 +132,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <?php
 $content = ob_get_clean();
-renderLayout("Dispatch Calendar", $content);
+renderLayout("LCMB Dashboard", $content);
 ?>
