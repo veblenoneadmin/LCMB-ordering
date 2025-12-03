@@ -59,7 +59,7 @@ ob_start();
 </div>
 
 <!-- Modal -->
-<div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden items-center justify-center z-50">
+<div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
     <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-96 max-w-full mx-2 animate-fadeIn">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" id="modalTitle">Dispatch Details</h2>
         <div class="space-y-2 text-gray-700 dark:text-gray-300">
@@ -72,6 +72,7 @@ ob_start();
         </div>
     </div>
 </div>
+
 
 <style>
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
