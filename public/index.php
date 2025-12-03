@@ -2,15 +2,49 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
+// Fetch dispatch data
+$stmt = $pdo->query("
+    SELECT d.id, d.date, d.hours, p.name AS personnel_name
+    FROM dispatch d
+    LEFT JOIN personnel p ON p.id = d.personnel_id
+");
+$dispatch = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Generate events array for JS
+$events = [];
+$colors = ['#3b82f6','#9333ea','#f97316','#059669','#ef4444','#eab308','#8b5cf6','#0ea5e9']; // sample colors
+$personnelColors = [];
+$colorIndex = 0;
+
+foreach ($dispatch as $row) {
+    $person = $row['personnel_name'] ?: 'Unknown';
+    if (!isset($personnelColors[$person])) {
+        $personnelColors[$person] = $colors[$colorIndex % count($colors)];
+        $colorIndex++;
+    }
+
+    $events[] = [
+        "id" => $row['id'],
+        "title" => $person . " (" . $row['hours'] . "h)",
+        "start" => $row['date'],
+        "color" => $personnelColors[$person],
+        "extendedProps" => [
+            "personnel" => $person,
+            "hours" => $row['hours'],
+            "date" => $row['date']
+        ]
+    ];
+}
+
+// Convert PHP events array to JSON for JS
+$eventsJson = json_encode($events, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
 ob_start();
 ?>
 
 <div class="bg-white p-4 rounded-2xl shadow-lg border border-gray-200">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-700">Booking Calendar</h2>
-        <select id="calendarFilter" class="p-2 border rounded-lg text-sm">
-            <option value="dispatch">Dispatch</option>
-        </select>
     </div>
     <div id="calendar" class="rounded-xl overflow-hidden"></div>
 </div>
@@ -36,7 +70,6 @@ ob_start();
 #calendar { height: 700px; }
 
 .fc .fc-event {
-    background-color: #4F46E5 !important;
     border-radius: 12px;
     color: #fff !important;
     padding: 4px 8px;
@@ -86,6 +119,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('dispatchModal');
     const closeModalBtn = document.getElementById('closeModal');
 
+    const events = <?= $eventsJson ?>;
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         height: 'auto',
@@ -95,35 +130,25 @@ document.addEventListener('DOMContentLoaded', function () {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-        events: function(fetchInfo, success, fail) {
-            fetch("fetch_dispatch.php") // Make sure this returns JSON events from dispatch DB
-                .then(res => res.json())
-                .then(data => success(data))
-                .catch(err => fail(err));
-        },
+        events: events,
         displayEventTime: false,
         editable: false,
         selectable: true,
         eventClick: function(info) {
             document.getElementById('modalTitle').textContent = info.event.title;
-            document.getElementById('modalDate').textContent = "Date: " + info.event.startStr;
-            document.getElementById('modalPersonnel').textContent = "Personnel: " + (info.event.extendedProps.personnel || 'N/A');
-            document.getElementById('modalHours').textContent = "Hours: " + (info.event.extendedProps.hours || '0');
+            document.getElementById('modalDate').textContent = "Date: " + info.event.extendedProps.date;
+            document.getElementById('modalPersonnel').textContent = "Personnel: " + info.event.extendedProps.personnel;
+            document.getElementById('modalHours').textContent = "Hours: " + info.event.extendedProps.hours;
             modal.classList.remove('hidden');
         }
     });
 
     calendar.render();
 
-    document.getElementById('calendarFilter').addEventListener('change', () => {
-        calendar.refetchEvents();
-    });
-
     closeModalBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
     });
 
-    // Close modal when clicking outside
     modal.addEventListener('click', (e) => {
         if(e.target === modal) modal.classList.add('hidden');
     });
