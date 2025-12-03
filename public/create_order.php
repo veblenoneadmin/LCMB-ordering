@@ -121,44 +121,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         // --- INSERT ORDER ---
-        $stmt = $pdo->prepare(
-            "INSERT INTO orders 
-            (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())"
-        );
-        $stmt->execute([
-            $customer_name, $customer_email, $contact_number,
-            $job_address, $appointment_date, $subtotal,
-            $order_number, 'pending', $grand_total, $tax, $discount
-        ]);
-        $order_id = $pdo->lastInsertId();
+$stmt = $pdo->prepare(
+    "INSERT INTO orders 
+    (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())"
+);
+$stmt->execute([
+    $customer_name, $customer_email, $contact_number,
+    $job_address, $appointment_date, $subtotal,
+    $order_number, 'pending', $grand_total, $tax, $discount
+]);
+$order_id = $pdo->lastInsertId();
 
-        // --- INSERT ORDER ITEMS ---
-        $stmt_item = $pdo->prepare(
-            "INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at)
-             VALUES (?,?,?,?,?,?,NOW())"
-        );
-        foreach ($items as $it) {
-            $stmt_item->execute([
-                $order_id, $it['item_type'], $it['item_id'] ?? null,
-                $it['installation_type'] ?? null, (int)$it['qty'], $it['price']
-            ]);
-        }
+// --- INSERT ORDER ITEMS ---
+$stmt_item = $pdo->prepare(
+    "INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at)
+     VALUES (?,?,?,?,?,?,NOW())"
+);
+foreach ($items as $it) {
+    $stmt_item->execute([
+        $order_id, $it['item_type'], $it['item_id'] ?? null,
+        $it['installation_type'] ?? null, (float)$it['qty'], (float)$it['price']
+    ]);
+}
 
-        // --- INSERT PERSONNEL DISPATCH ---
-        if (!empty($_POST['personnel_hours'])) {
-            $stmt_dispatch = $pdo->prepare(
-                "INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
-                 VALUES (?, ?, ?, ?, NOW())"
-            );
-            foreach ($_POST['personnel_hours'] as $pid => $hours) {
-                $hours = floatval($hours);
-                $date = $_POST['personnel_date'][$pid] ?? date('Y-m-d');
-                if ($hours > 0) {
-                    $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
-                }
-            }
+// --- INSERT PERSONNEL DISPATCH ---
+if (!empty($_POST['personnel_hours'])) {
+    $stmt_dispatch = $pdo->prepare(
+        "INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
+         VALUES (?, ?, ?, ?, NOW())"
+    );
+    foreach ($_POST['personnel_hours'] as $pid => $hours) {
+        $hours = floatval($hours);
+        $date = $_POST['personnel_date'][$pid] ?? date('Y-m-d');
+        if ($hours > 0) {
+            $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
         }
+    }
+}
 
         $pdo->commit();
         header("Location: review_order.php?order_id=".$order_id);
