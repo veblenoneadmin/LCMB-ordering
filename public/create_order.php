@@ -12,8 +12,7 @@ try {
     $customer_email    = $_POST['customer_email'] ?? '';
     $contact_number    = $_POST['contact_number'] ?? '';
     $job_address       = $_POST['job_address'] ?? '';
-    $appointment_date_raw = $_POST['appointment_date'] ?? '';
-    $appointment_date = ($appointment_date_raw === '' ? null : $appointment_date_raw);
+    $appointment_date  = $_POST['appointment_date'] ?? '';
     $discount          = floatval($_POST['discount'] ?? 0);
 
     // ============================
@@ -147,24 +146,16 @@ try {
     $order_number = "ORD-" . time();
 
     $stmt = $pdo->prepare("
-    INSERT INTO orders
-    (customer_name, customer_email, contact_number, job_address, appointment_date,
-     total_amount, order_number, status, total, tax, discount, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
-");
-$stmt->execute([
-    $customer_name,
-    $customer_email,
-    $contact_number,
-    $job_address,
-    $appointment_date,  // ← now NULL-safe
-    $subtotal_after_discount,
-    $order_number,
-    'pending',
-    $grand_total,
-    $tax,
-    $discount
-]);
+        INSERT INTO orders
+        (customer_name, customer_email, contact_number, job_address, appointment_date,
+         total_amount, order_number, status, total, tax, discount, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
+    ");
+    $stmt->execute([
+        $customer_name, $customer_email, $contact_number,
+        $job_address, $appointment_date, $subtotal_after_discount,
+        $order_number, 'pending', $grand_total, $tax, $discount
+    ]);
 
     $order_id = $pdo->lastInsertId();
 
