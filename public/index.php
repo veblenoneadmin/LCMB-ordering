@@ -2,7 +2,13 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-// Fetch dispatch data
+// --- Analytics Metrics ---
+$totalOrders = $pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();
+$totalInstallations = $pdo->query("SELECT COUNT(*) FROM split_installation UNION SELECT COUNT(*) FROM ductedinstallations")->rowCount();
+$totalClients = $pdo->query("SELECT COUNT(DISTINCT customer_email) FROM orders")->fetchColumn();
+$pendingOrders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status='pending'")->fetchColumn();
+
+// --- Fetch dispatch data ---
 $stmt = $pdo->query("
     SELECT d.id, d.date, d.hours, p.name AS personnel_name
     FROM dispatch d
@@ -39,7 +45,30 @@ foreach ($dispatch as $row) {
 ob_start();
 ?>
 
-<!-- Calendar -->
+<!-- Analytics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 flex flex-col">
+        <h3 class="text-gray-500 font-medium text-sm">Total Orders</h3> 
+        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalOrders ?></p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-5 flex flex-col">
+        <h3 class="text-gray-500 font-medium text-sm">Installations</h3>
+        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalInstallations ?></p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-5 flex flex-col">
+        <h3 class="text-gray-500 font-medium text-sm">Clients</h3>
+        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalClients ?></p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-5 flex flex-col">
+        <h3 class="text-gray-500 font-medium text-sm">Pending Orders</h3>
+        <p class="text-2xl font-bold text-gray-800 mt-2"><?= $pendingOrders ?></p>
+    </div>
+</div>
+
+<!-- Dispatch Calendar -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
     <h2 class="text-xl font-semibold text-gray-700 mb-2">Dispatch Board</h2>
     <div class="mb-2">
@@ -54,7 +83,7 @@ ob_start();
     <div id="calendar" class="rounded-lg border"></div>
 </div>
 
-<!-- Modal -->
+<!-- Modal (Modern Centered) -->
 <div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
     <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out" id="dispatchModalContent">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" id="modalTitle">Dispatch Details</h2>
@@ -105,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalPersonnel').innerText = "Personnel: " + e.personnel;
             document.getElementById('modalHours').innerText = "Hours: " + e.hours;
             
-            // Open modern modal
             modal.classList.remove('hidden');
             void modalContent.offsetWidth; // trigger reflow
             modal.classList.add('show');
@@ -114,13 +142,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     calendar.render();
 
-    // Close modal
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // Personnel filter
     document.getElementById('personnelFilter').addEventListener('change', function() {
         const val = this.value;
         let filteredEvents = val === 'all' ? allEvents : allEvents.filter(ev => ev.extendedProps.personnel === val);
