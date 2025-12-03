@@ -51,6 +51,10 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         margin-top: 10px;
     }
     </style>
+     <!-- ⭐ ADDED: FullCalendar CSS & JS (required for calendar to appear) -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+    <!-- ⭐ END ADDED -->
 </head>
 
 <body class="flex">
