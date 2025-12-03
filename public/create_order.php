@@ -4,26 +4,50 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
 // Fetch all data safely
-try { $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $products=[]; }
-try { $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $split_installations=[]; }
-try { $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $ducted_installations=[]; }
-try { $personnel = $pdo->query("SELECT id, name, rate, role FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); }
-try { $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $equipment=[]; }
+try {
+    $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $products = [];
+}
+
+try {
+    $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $split_installations = [];
+}
+
+try {
+    $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $ducted_installations = [];
+}
+
+try {
+    $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $personnel = [];
+}
+
+try {
+    $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $equipment = [];
+}
 
 $message = '';
 
-function f2($v){ return number_format((float)$v, 2, '.', ''); }
+function f2($v) { return number_format((float)$v, 2, '.', ''); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customer_name   = trim($_POST['customer_name'] ?? '');
-    $customer_email  = trim($_POST['customer_email'] ?? null);
-    $contact_number  = trim($_POST['contact_number'] ?? null);
-    $job_address     = trim($_POST['job_address'] ?? null);
-    $appointment_date= !empty($_POST['appointment_date']) ? $_POST['appointment_date'] : null;
+    $customer_name    = trim($_POST['customer_name'] ?? '');
+    $customer_email   = trim($_POST['customer_email'] ?? null);
+    $contact_number   = trim($_POST['contact_number'] ?? null);
+    $job_address      = trim($_POST['job_address'] ?? null);
+    $appointment_date = !empty($_POST['appointment_date']) ? $_POST['appointment_date'] : null;
 
     $items = [];
 
-    // --- PRODUCTS ---
+    // PRODUCTS
     foreach ($_POST['product'] ?? [] as $pid => $qty) {
         $qty = intval($qty);
         if ($qty > 0) {
@@ -31,16 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$pid]);
             $price = (float)$stmt->fetchColumn();
             $items[] = [
-                'item_type'=>'product',
-                'item_id'=>$pid,
-                'installation_type'=>null,
-                'qty'=>$qty,
-                'price'=>$price
+                'item_type' => 'product',
+                'item_id' => $pid,
+                'installation_type' => null,
+                'qty' => $qty,
+                'price' => $price,
             ];
         }
     }
 
-    // --- SPLIT INSTALLATIONS ---
+    // SPLIT INSTALLATIONS
     foreach ($_POST['split'] ?? [] as $sid => $qty) {
         $qty = intval($qty);
         if ($qty > 0) {
@@ -48,16 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$sid]);
             $price = (float)$stmt->fetchColumn();
             $items[] = [
-                'item_type'=>'installation',
-                'item_id'=>$sid,
-                'installation_type'=>null,
-                'qty'=>$qty,
-                'price'=>$price
+                'item_type' => 'installation',
+                'item_id' => $sid,
+                'installation_type' => null,
+                'qty' => $qty,
+                'price' => $price,
             ];
         }
     }
 
-    // --- DUCTED INSTALLATIONS ---
+    // DUCTED INSTALLATIONS
     foreach ($_POST['ducted'] ?? [] as $did => $data) {
         $qty = intval($data['qty'] ?? 0);
         $type = $data['type'] ?? 'indoor';
@@ -66,16 +90,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$did]);
             $price = (float)$stmt->fetchColumn();
             $items[] = [
-                'item_type'=>'installation',
-                'item_id'=>$did,
-                'installation_type'=>in_array($type,['indoor','outdoor']) ? $type : 'indoor',
-                'qty'=>$qty,
-                'price'=>$price
+                'item_type' => 'installation',
+                'item_id' => $did,
+                'installation_type' => in_array($type, ['indoor','outdoor']) ? $type : 'indoor',
+                'qty' => $qty,
+                'price' => $price,
             ];
         }
     }
 
-    // --- EQUIPMENT ---
+    // EQUIPMENT
     foreach ($_POST['equipment'] ?? [] as $eid => $qty) {
         $qty = intval($qty);
         if ($qty > 0) {
@@ -83,16 +107,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$eid]);
             $rate = (float)$stmt->fetchColumn();
             $items[] = [
-                'item_type'=>'product',
-                'item_id'=>$eid,
-                'installation_type'=>null,
-                'qty'=>$qty,
-                'price'=>$rate
+                'item_type' => 'product',
+                'item_id' => $eid,
+                'installation_type' => null,
+                'qty' => $qty,
+                'price' => $rate,
             ];
         }
     }
 
-    // --- OTHER EXPENSES ---
+    // OTHER EXPENSES
     $other_names   = $_POST['other_expense_name'] ?? [];
     $other_amounts = $_POST['other_expense_amount'] ?? [];
     foreach ($other_amounts as $i => $amt) {
@@ -100,85 +124,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($other_names[$i] ?? '');
         if ($amt > 0) {
             $items[] = [
-                'item_type'=>'product',
-                'item_id'=>0,
-                'installation_type'=>$name ?: 'Other expense',
-                'qty'=>1,
-                'price'=>$amt
+                'item_type' => 'product',
+                'item_id' => 0,
+                'installation_type' => $name ?: 'Other expense',
+                'qty' => 1,
+                'price' => $amt,
             ];
         }
     }
 
-    // --- CALCULATE TOTALS ---
+    // PERSONNEL (add to order_items as qty=hours, price=rate) and prepare dispatch rows
+    $personnel_dispatch_rows = [];
+    foreach ($_POST['personnel_hours'] ?? [] as $pid => $hours_raw) {
+        $hours = floatval($hours_raw);
+        if ($hours <= 0) continue;
+        $stmt = $pdo->prepare("SELECT rate FROM personnel WHERE id=? LIMIT 1");
+        $stmt->execute([$pid]);
+        $rate = (float)$stmt->fetchColumn();
+        $items[] = [
+            'item_type' => 'personnel',
+            'item_id' => (int)$pid,
+            'installation_type' => null,
+            'qty' => $hours,
+            'price' => $rate,
+        ];
+        $date = $_POST['personnel_date'][$pid] ?? $appointment_date ?? date('Y-m-d');
+        $personnel_dispatch_rows[] = [
+            'personnel_id' => (int)$pid,
+            'date' => $date,
+            'hours' => $hours,
+        ];
+    }
+
+    // CALCULATE TOTALS
     $subtotal = 0.0;
-    foreach ($items as $it) $subtotal += ($it['qty'] * $it['price']);
+    foreach ($items as $it) {
+        $subtotal += ((float)$it['qty'] * (float)$it['price']);
+    }
     $tax = round($subtotal * 0.10, 2);
     $grand_total = round($subtotal + $tax, 2);
     $discount = 0.00;
-    $order_number = 'ORD'.time().rand(10,99);
+    $order_number = 'ORD' . time() . rand(10,99);
 
     try {
         $pdo->beginTransaction();
 
-        // --- INSERT ORDER ---
-$stmt = $pdo->prepare(
-    "INSERT INTO orders 
-    (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())"
-);
-$stmt->execute([
-    $customer_name, $customer_email, $contact_number,
-    $job_address, $appointment_date, $subtotal,
-    $order_number, 'pending', $grand_total, $tax, $discount
-]);
-$order_id = $pdo->lastInsertId();
+        // INSERT ORDER - bind appointment_date as NULL if not provided
+        $stmt = $pdo->prepare("
+            INSERT INTO orders
+            (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
+        ");
+        $stmt->execute([
+            $customer_name,
+            $customer_email,
+            $contact_number,
+            $job_address,
+            $appointment_date !== null ? $appointment_date : null,
+            f2($subtotal),
+            $order_number,
+            'pending',
+            f2($grand_total),
+            f2($tax),
+            f2($discount)
+        ]);
+        $order_id = $pdo->lastInsertId();
 
-// --- INSERT ORDER ITEMS ---
-$stmt_item = $pdo->prepare(
-    "INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at)
-     VALUES (?,?,?,?,?,?,NOW())"
-);
-foreach ($items as $it) {
-    $stmt_item->execute([
-        $order_id, $it['item_type'], $it['item_id'] ?? null,
-        $it['installation_type'] ?? null, (float)$it['qty'], (float)$it['price']
-    ]);
-}
+        // INSERT ORDER ITEMS
+        $stmt_item = $pdo->prepare("
+            INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at)
+            VALUES (?,?,?,?,?,?,NOW())
+        ");
+        foreach ($items as $it) {
+            $qty = is_numeric($it['qty']) ? $it['qty'] : (float)$it['qty'];
+            $price = is_numeric($it['price']) ? $it['price'] : (float)$it['price'];
+            $stmt_item->execute([
+                $order_id,
+                $it['item_type'],
+                $it['item_id'] ?? null,
+                $it['installation_type'] ?? null,
+                $qty,
+                f2($price)
+            ]);
+        }
 
-// --- INSERT PERSONNEL DISPATCH ---
-if (!empty($_POST['personnel_hours'])) {
-    $stmt_dispatch = $pdo->prepare(
-        "INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
-         VALUES (?, ?, ?, ?, NOW())"
-    );
-    foreach ($_POST['personnel_hours'] as $pid => $hours) {
-        $hours = floatval($hours);
-        $date = $_POST['personnel_date'][$pid] ?: ($appointment_date ?: date('Y-m-d'));
-
-        if ($hours > 0) {
-            $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
+        // INSERT DISPATCH rows for personnel
+        if (!empty($personnel_dispatch_rows)) {
+            $stmt_dispatch = $pdo->prepare("
+                INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
+                VALUES (?, ?, ?, ?, NOW())
+            ");
+            foreach ($personnel_dispatch_rows as $r) {
+                $d = $r['date'] ?: date('Y-m-d');
+                // simple YYYY-MM-DD validation; fallback to today
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) $d = date('Y-m-d');
+                $stmt_dispatch->execute([$order_id, $r['personnel_id'], $d, f2($r['hours'])]);
             }
         }
-    }
-}
 
         $pdo->commit();
-        header("Location: review_order.php?order_id=".$order_id);
+        header("Location: review_order.php?order_id=" . $order_id);
         exit;
-
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         $pdo->rollBack();
-        $message = 'Error saving order: '.$e->getMessage();
+        $message = 'Error saving order: ' . $e->getMessage();
     }
-}
+} // end POST
 
-
+// Render form
 ob_start();
 ?>
 
-
-<?php if($message): ?>
-<div class="alert" style="padding:10px;background:#fee;border:1px solid #fbb;margin-bottom:12px;"><?= htmlspecialchars($message) ?></div>
+<?php if ($message): ?>
+    <div class="alert" style="padding:10px;background:#fee;border:1px solid #fbb;margin-bottom:12px;"><?= htmlspecialchars($message) ?></div>
 <?php endif; ?>
 
 <form method="post" class="create-order-grid" id="orderForm" novalidate>
@@ -208,15 +266,14 @@ ob_start();
 <tr><th class="p-2 text-left">Name</th><th class="p-2 text-center">Price</th><th class="p-2 text-center">Qty</th><th class="p-2 text-center">Subtotal</th></tr>
 </thead>
 <tbody>
-<?php foreach($products as $p): $pid=(int)$p['id']; ?>
+<?php foreach ($products as $p): $pid = (int)$p['id']; ?>
 <tr class="border-b">
 <td class="product-name p-2"><?= htmlspecialchars($p['name']) ?></td>
 <td class="p-2 text-center">$<span class="prod-price"><?= number_format($p['price'],2) ?></span></td>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
 <button type="button" class="qtbn minus">-</button>
-<input type="number" min="0" value="0" name="product[<?= $pid ?>]" 
-       class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>">
+<input type="number" min="0" value="0" name="product[<?= $pid ?>]" class="qty-input" data-price="<?= htmlspecialchars($p['price']) ?>">
 <button type="button" class="qtbn plus">+</button>
 </div>
 </td>
@@ -238,7 +295,7 @@ ob_start();
 <table id="splitTable" class="products-table w-full border-collapse text-sm">
 <thead><tr><th>Name</th><th>Unit Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
 <tbody>
-<?php foreach($split_installations as $s): $sid=(int)$s['id']; ?>
+<?php foreach ($split_installations as $s): $sid = (int)$s['id']; ?>
 <tr>
 <td><?= htmlspecialchars($s['name']) ?></td>
 <td>$<span class="split-price"><?= number_format($s['price'],2) ?></span></td>
@@ -266,7 +323,7 @@ ob_start();
 <table class="products-table w-full border-collapse text-sm">
 <thead><tr><th>Equipment</th><th>Type</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
 <tbody>
-<?php foreach($ducted_installations as $d): $did=(int)$d['id']; ?>
+<?php foreach ($ducted_installations as $d): $did = (int)$d['id']; ?>
 <tr>
 <td><?= htmlspecialchars($d['name']) ?></td>
 <td>
@@ -302,29 +359,29 @@ ob_start();
       <thead class="bg-gray-100 sticky top-0">
         <tr>
           <th class="p-2 text-left">Name</th>
-          <th class="p-2 text-center">Role</th>
+          <th class="p-2 text-center">Rate</th>
           <th class="p-2 text-center">Date</th>
           <th class="p-2 text-center">Hours</th>
           <th class="p-2 text-center">Subtotal</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
+        <?php foreach ($personnel as $p): $pid = (int)$p['id']; ?>
         <tr data-id="<?= $pid ?>" class="border-b text-center">
           <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
-          <td class="p-2 text-center"><?= htmlspecialchars($p['role'] ?? 'Technician') ?></td>
+          <td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
           <td class="p-2 text-center">
             <input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD">
           </td>
           <td class="p-2 text-center">
-                    <div class="qty-wrapper">
-                        <button type="button" class="qtbn hour-minus">-</button>
-                        <input type="number" min="0" value="0"
-                               name="personnel_hours[<?= $pid ?>]"
-                               class="qty-input pers-hours" data-rate="<?= $p['rate'] ?>">
-                        <button type="button" class="qtbn hour-plus">+</button>
-                    </div>
-                </td>
+            <div class="qty-wrapper">
+                <button type="button" class="qtbn hour-minus">-</button>
+                <input type="number" min="0" value="0"
+                       name="personnel_hours[<?= $pid ?>]"
+                       class="qty-input pers-hours" data-rate="<?= htmlspecialchars($p['rate']) ?>">
+                <button type="button" class="qtbn hour-plus">+</button>
+            </div>
+          </td>
           <td class="p-2">$<span class="pers-subtotal">0.00</span></td>
         </tr>
         <?php endforeach; ?>
@@ -332,7 +389,6 @@ ob_start();
     </table>
   </div>
 </div>
-
 
 <!-- EQUIPMENT -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
@@ -344,7 +400,7 @@ ob_start();
 <table class="products-table w-full border-collapse text-sm">
 <thead><tr><th>Item</th><th>Rate</th><th>Qty</th><th>Subtotal</th></tr></thead>
 <tbody>
-<?php foreach($equipment as $e): $eid=(int)$e['id']; ?>
+<?php foreach ($equipment as $e): $eid = (int)$e['id']; ?>
 <tr>
 <td><?= htmlspecialchars($e['name']) ?></td>
 <td class="equip-rate"><?= number_format($e['rate'],2) ?></td>
@@ -402,91 +458,85 @@ ob_start();
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
-  // ---------- UTILS ----------
   function parseFloatSafe(v){ return parseFloat(v)||0; }
+  function fmt(n){ return Number(n||0).toFixed(2); }
 
-  // ---------- ROW SUBTOTAL ----------
   function updateRowSubtotal(row){
+      if(!row) return;
+      const persInput = row.querySelector(".pers-hours");
+      if(persInput){
+          const rate = parseFloatSafe(persInput.dataset.rate);
+          const hours = parseFloatSafe(persInput.value);
+          const persSub = row.querySelector(".pers-subtotal");
+          if(persSub) persSub.textContent = (hours * rate).toFixed(2);
+          return;
+      }
+
       const input = row.querySelector(".qty-input");
       if(!input) return;
-      const price = parseFloatSafe(input.dataset.price||input.dataset.rate);
+      const price = parseFloatSafe(input.dataset.price || input.dataset.rate);
       const qty = parseFloatSafe(input.value);
-      const subtotalEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+      const subtotalEl = row.querySelector(".row-subtotal, .equip-subtotal");
       if(subtotalEl) subtotalEl.textContent = (qty*price).toFixed(2);
   }
 
-
-  // ---------- SUMMARY ----------
   function updateSummary(){
       let subtotal=0;
-
       document.querySelectorAll("tr").forEach(row=>{
           const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
           if(subEl) subtotal += parseFloatSafe(subEl.textContent);
       });
+      document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp => subtotal += parseFloatSafe(inp.value));
+      const tax = subtotal * 0.10;
+      const grand = subtotal + tax;
+      document.getElementById("subtotalDisplay").textContent = fmt(subtotal);
+      document.getElementById("taxDisplay").textContent = fmt(tax);
+      document.getElementById("grandDisplay").textContent = fmt(grand);
 
-      document.querySelectorAll(".other-exp-amount").forEach(inp=> subtotal+=parseFloatSafe(inp.value));
-
-      const tax = subtotal*0.10;
-      const grand = subtotal+tax;
-
-      document.getElementById("subtotalDisplay").textContent = subtotal.toFixed(2);
-      document.getElementById("taxDisplay").textContent = tax.toFixed(2);
-      document.getElementById("grandDisplay").textContent = grand.toFixed(2);
+      // update orderSummary panel
+      const summaryEl = document.getElementById('orderSummary');
+      summaryEl.innerHTML = '';
+      document.querySelectorAll("tr").forEach(row=>{
+        const name = row.querySelector('td')?.textContent?.trim();
+        const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+        if(name && subEl && parseFloatSafe(subEl.textContent) > 0){
+            let qty = '';
+            if(row.querySelector('.pers-hours')) qty = (row.querySelector('.pers-hours').value || '0') + ' hr';
+            else {
+                const q = row.querySelector('.qty-input');
+                if(q) qty = q.value || '0';
+            }
+            const div = document.createElement('div');
+            div.className = 'summary-item flex justify-between py-1';
+            div.innerHTML = `<span style="color:#374151">${name}${qty?(' x '+qty):''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
+            summaryEl.appendChild(div);
+        }
+      });
+      if(summaryEl.innerHTML.trim() === '') summaryEl.innerHTML = '<div class="empty-note">No items selected.</div>';
   }
 
- // ----- PLUS / MINUS BUTTONS -----
-document.querySelectorAll(".qbtn, .qtbn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const input = btn.closest("td, div").querySelector("input");
-        if (!input) return;
-
-        let val = parseFloat(input.value) || 0;
-
-        // All increments = 1
-        if (btn.classList.contains("hour-plus")) val++;
-        else if (btn.classList.contains("hour-minus")) val = Math.max(0, val - 1);
-        else if (btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("equip-plus")) val++;
-        else if (btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("equip-minus")) val = Math.max(0, val - 1);
-
-        input.value = val;
-
-        const row = input.closest("tr");
-
-        // Personnel subtotal update
-        if (input.classList.contains("pers-hours")) {
-            const rate = parseFloat(input.dataset.rate);
-            const subtotalEl = row.querySelector(".pers-subtotal");
-            subtotalEl.textContent = (val * rate).toFixed(2);
-        }
-
-        updateRowSubtotal(row);
-        updateSummary();
-    });
-});
-
-  // ---------- PERSONNEL EVENTS ----------
-  document.querySelectorAll(".personnel-start, .personnel-end").forEach(input=>{
-      // 30-minute increments
-      input.step = 1800;
-
-      const pid = input.dataset.id;
-      input.addEventListener("change", ()=>{
-          updatePersonnelHours(pid);
+  document.querySelectorAll(".qbtn, .qtbn").forEach(btn => {
+      btn.addEventListener("click", () => {
+          const input = btn.closest("td, div").querySelector("input");
+          if (!input) return;
+          let val = parseFloat(input.value) || 0;
+          if (btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus") || btn.classList.contains("hour-plus")) val++;
+          else if (btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus") || btn.classList.contains("hour-minus")) val = Math.max(0, val - 1);
+          input.value = val;
+          const row = input.closest("tr");
+          updateRowSubtotal(row);
           updateSummary();
       });
   });
 
-  // Toggle personnel extra rows
-  document.querySelectorAll(".personnel-row").forEach(row=>{
-      row.addEventListener("click", e=>{
-          if(e.target.tagName==="INPUT" || e.target.tagName==="BUTTON") return;
-          const extra = document.getElementById("extra-"+row.dataset.id);
-          extra?.classList.toggle("hidden");
+  document.querySelectorAll(".qty-input").forEach(input=>{
+      input.addEventListener('input', ()=>{
+          const row = input.closest("tr");
+          updateRowSubtotal(row);
+          updateSummary();
       });
   });
 
-  // ---------- OTHER EXPENSES ----------
   document.getElementById("addExpenseBtn").addEventListener("click", function(){
       const container = document.getElementById("otherExpensesContainer");
       const div = document.createElement("div");
@@ -497,78 +547,29 @@ document.querySelectorAll(".qbtn, .qtbn").forEach(btn => {
           <button type="button" class="qbtn remove-expense">X</button>
       `;
       container.appendChild(div);
-      div.querySelector(".remove-expense").addEventListener("click", ()=>{
-          div.remove();
-          updateSummary();
-      });
+      div.querySelector(".remove-expense").addEventListener("click", ()=>{ div.remove(); updateSummary(); });
       div.querySelector(".other-exp-amount").addEventListener("input", updateSummary);
   });
 
-  function updateOrderSummary() {
-    const container = document.getElementById("orderSummary");
-    container.innerHTML = "";
-
-    const rows = document.querySelectorAll("tr");
-    let hasItems = false;
-
-    rows.forEach(row => {
-        const qtyInput = row.querySelector(".qty-input, .pers-hours, .equip-input");
-        const subtotalEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-
-        if (!qtyInput || !subtotalEl) return;
-
-        const qty = parseFloat(qtyInput.value) || 0;
-        const subtotal = parseFloat(subtotalEl.textContent) || 0;
-
-        if (qty > 0) {
-            hasItems = true;
-
-            const name = row.querySelector("td")?.textContent.trim() || "Item";
-
-            const div = document.createElement("div");
-            div.className = "flex justify-between text-sm mb-1";
-            div.innerHTML = `
-                <span>${name} × ${qty}</span>
-                <span>$${subtotal.toFixed(2)}</span>
-            `;
-            container.appendChild(div);
-        }
-    });
-
-    if (!hasItems) {
-        container.innerHTML = `<div class="empty-note">No items selected.</div>`;
-    }
-}
-
-
-  // ---------- LIVE SEARCH ----------
   function simpleSearch(inputId, tableSelector, cellSelector){
-      const input=document.getElementById(inputId); if(!input) return;
-      input.addEventListener("input", ()=>{
-          const q=input.value.trim().toLowerCase();
-          document.querySelectorAll(tableSelector+" tbody tr").forEach(row=>{
-              const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
-              row.style.display = text.includes(q)?'':'none';
-          });
+    const input=document.getElementById(inputId); if(!input) return;
+    input.addEventListener("input", ()=>{
+      const q=input.value.trim().toLowerCase();
+      document.querySelectorAll(tableSelector+" tbody tr").forEach(row=>{
+        const text=(row.querySelector(cellSelector)?.textContent||'').toLowerCase();
+        row.style.display = text.includes(q)?'':'none';
       });
+    });
   }
   simpleSearch("productSearch",".products-table","td.product-name");
   simpleSearch("splitSearch","#splitTable","td");
   simpleSearch("personnelSearch",".personnel-table","td");
-  simpleSearch("equipmentSearch",".equipment-table","td");
+  simpleSearch("equipmentSearch",".products-table","td");
 
-  // ---------- INITIAL CALC ----------
-  document.querySelectorAll("tr").forEach(updateRowSubtotal);
-  document.querySelectorAll("input[name^='personnel_hours']").forEach(inp=>{
-      const pid = inp.name.match(/\[(\d+)\]/)[1];
-      updatePersonnelHours(pid);
-  });
+  document.querySelectorAll("tr").forEach(row => updateRowSubtotal(row));
   updateSummary();
-
 });
 </script>
-
-
 
 <?php
 $content = ob_get_clean();
