@@ -1,215 +1,173 @@
 <?php
+// create_order.php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-try {
-    $pdo->beginTransaction();
+// Fetch all data safely
+try { $products = $pdo->query("SELECT id, name, price FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $products=[]; }
+try { $split_installations = $pdo->query("SELECT id, item_name AS name, unit_price AS price FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $split_installations=[]; }
+try { $ducted_installations = $pdo->query("SELECT id, equipment_name AS name, model_name_indoor, model_name_outdoor, total_cost AS price FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $ducted_installations=[]; }
+try { $personnel = $pdo->query("SELECT id, name, rate FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $personnel=[]; }
+try { $equipment = $pdo->query("SELECT id, item AS name, rate FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e){ $equipment=[]; }
 
-    // ============================
-    // 1. GET FORM INPUTS
-    // ============================
-    $customer_name     = $_POST['customer_name'] ?? '';
-    $customer_email    = $_POST['customer_email'] ?? '';
-    $contact_number    = $_POST['contact_number'] ?? '';
-    $job_address       = $_POST['job_address'] ?? '';
-    $appointment_date  = $_POST['appointment_date'] ?? '';
-    $discount          = floatval($_POST['discount'] ?? 0);
+$message = '';
 
-    // ============================
-    // 2. BUILD ITEMS ARRAY
-    // (EVERYTHING GOES INTO order_items)
-    // ============================
+function f2($v){ return number_format((float)$v, 2, '.', ''); }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $customer_name   = trim($_POST['customer_name'] ?? '');
+    $customer_email  = trim($_POST['customer_email'] ?? null);
+    $contact_number  = trim($_POST['contact_number'] ?? null);
+    $job_address     = trim($_POST['job_address'] ?? null);
+    $appointment_date= !empty($_POST['appointment_date']) ? $_POST['appointment_date'] : null;
+
     $items = [];
 
     // --- PRODUCTS ---
-    if (!empty($_POST['product_id'])) {
-        foreach ($_POST['product_id'] as $i => $pid) {
-            $qty = floatval($_POST['product_qty'][$i] ?? 0);
-            $price = floatval($_POST['product_price'][$i] ?? 0);
-
-            if ($qty > 0) {
-                $items[] = [
-                    'item_type' => 'product',
-                    'item_id'   => $pid,
-                    'qty'       => $qty,
-                    'price'     => $price
-                ];
-            }
+    foreach ($_POST['product'] ?? [] as $pid => $qty) {
+        $qty = intval($qty);
+        if ($qty > 0) {
+            $stmt = $pdo->prepare("SELECT price FROM products WHERE id=? LIMIT 1");
+            $stmt->execute([$pid]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = [
+                'item_type'=>'product',
+                'item_id'=>$pid,
+                'installation_type'=>null,
+                'qty'=>$qty,
+                'price'=>$price
+            ];
         }
     }
 
     // --- SPLIT INSTALLATIONS ---
-    if (!empty($_POST['split_id'])) {
-        foreach ($_POST['split_id'] as $i => $sid) {
-            $qty = floatval($_POST['split_qty'][$i] ?? 0);
-            $price = floatval($_POST['split_price'][$i] ?? 0);
-
-            if ($qty > 0) {
-                $items[] = [
-                    'item_type'         => 'installation',
-                    'item_id'           => $sid,
-                    'installation_type' => 'split',
-                    'qty'               => $qty,
-                    'price'             => $price
-                ];
-            }
+    foreach ($_POST['split'] ?? [] as $sid => $qty) {
+        $qty = intval($qty);
+        if ($qty > 0) {
+            $stmt = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id=? LIMIT 1");
+            $stmt->execute([$sid]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = [
+                'item_type'=>'installation',
+                'item_id'=>$sid,
+                'installation_type'=>null,
+                'qty'=>$qty,
+                'price'=>$price
+            ];
         }
     }
 
     // --- DUCTED INSTALLATIONS ---
-    if (!empty($_POST['ducted_id'])) {
-        foreach ($_POST['ducted_id'] as $i => $did) {
-            $qty = floatval($_POST['ducted_qty'][$i] ?? 0);
-            $price = floatval($_POST['ducted_price'][$i] ?? 0);
-
-            if ($qty > 0) {
-                $items[] = [
-                    'item_type'         => 'installation',
-                    'item_id'           => $did,
-                    'installation_type' => 'ducted',
-                    'qty'               => $qty,
-                    'price'             => $price
-                ];
-            }
+    foreach ($_POST['ducted'] ?? [] as $did => $data) {
+        $qty = intval($data['qty'] ?? 0);
+        $type = $data['type'] ?? 'indoor';
+        if ($qty > 0) {
+            $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
+            $stmt->execute([$did]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = [
+                'item_type'=>'installation',
+                'item_id'=>$did,
+                'installation_type'=>in_array($type,['indoor','outdoor']) ? $type : 'indoor',
+                'qty'=>$qty,
+                'price'=>$price
+            ];
         }
     }
 
-    // --- PERSONNEL ---
-    if (!empty($_POST['personnel_hours'])) {
-        foreach ($_POST['personnel_hours'] as $pid => $hours) {
-            $hours = floatval($hours);
-            $rate = floatval($_POST['personnel_rate'][$pid] ?? 0);
-
-            if ($hours > 0) {
-                $items[] = [
-                    'item_type' => 'personnel',
-                    'item_id'   => $pid,
-                    'qty'       => $hours,
-                    'price'     => $rate
-                ];
-            }
+    // --- EQUIPMENT ---
+    foreach ($_POST['equipment'] ?? [] as $eid => $qty) {
+        $qty = intval($qty);
+        if ($qty > 0) {
+            $stmt = $pdo->prepare("SELECT rate FROM equipment WHERE id=? LIMIT 1");
+            $stmt->execute([$eid]);
+            $rate = (float)$stmt->fetchColumn();
+            $items[] = [
+                'item_type'=>'product',
+                'item_id'=>$eid,
+                'installation_type'=>null,
+                'qty'=>$qty,
+                'price'=>$rate
+            ];
         }
     }
 
-    // --- EQUIPMENT RENTAL ---
-    if (!empty($_POST['equipment_id'])) {
-        foreach ($_POST['equipment_id'] as $i => $eid) {
-            $qty = floatval($_POST['equipment_qty'][$i] ?? 0);
-            $price = floatval($_POST['equipment_price'][$i] ?? 0);
-
-            if ($qty > 0) {
-                $items[] = [
-                    'item_type' => 'equipment',
-                    'item_id'   => $eid,
-                    'qty'       => $qty,
-                    'price'     => $price
-                ];
-            }
+    // --- OTHER EXPENSES ---
+    $other_names   = $_POST['other_expense_name'] ?? [];
+    $other_amounts = $_POST['other_expense_amount'] ?? [];
+    foreach ($other_amounts as $i => $amt) {
+        $amt = floatval($amt);
+        $name = trim($other_names[$i] ?? '');
+        if ($amt > 0) {
+            $items[] = [
+                'item_type'=>'product',
+                'item_id'=>0,
+                'installation_type'=>$name ?: 'Other expense',
+                'qty'=>1,
+                'price'=>$amt
+            ];
         }
     }
 
-    // --- EXPENSES ---
-    if (!empty($_POST['expense_name'])) {
-        foreach ($_POST['expense_name'] as $i => $expName) {
-            $qty = floatval($_POST['expense_qty'][$i] ?? 0);
-            $price = floatval($_POST['expense_price'][$i] ?? 0);
+    // --- CALCULATE TOTALS ---
+    $subtotal = 0.0;
+    foreach ($items as $it) $subtotal += ($it['qty'] * $it['price']);
+    $tax = round($subtotal * 0.10, 2);
+    $grand_total = round($subtotal + $tax, 2);
+    $discount = 0.00;
+    $order_number = 'ORD'.time().rand(10,99);
 
-            if ($qty > 0) {
-                $items[] = [
-                    'item_type' => 'expense',
-                    'item_id'   => null,
-                    'qty'       => $qty,
-                    'price'     => $price,
-                    'name'      => $expName
-                ];
-            }
-        }
-    }
+    try {
+        $pdo->beginTransaction();
 
-    // ============================
-    // 3. COMPUTE TOTAL
-    // ============================
-    $subtotal = 0;
-    foreach ($items as $i) {
-        $subtotal += $i['qty'] * $i['price'];
-    }
-
-    $discount_amount = ($discount > 0) ? ($subtotal * ($discount / 100)) : 0;
-    $subtotal_after_discount = $subtotal - $discount_amount;
-
-    $tax = round($subtotal_after_discount * 0.10, 2);
-    $grand_total = $subtotal_after_discount + $tax;
-
-    // ============================
-    // 4. INSERT ORDER
-    // ============================
-    $order_number = "ORD-" . time();
-
-    $stmt = $pdo->prepare("
-        INSERT INTO orders
-        (customer_name, customer_email, contact_number, job_address, appointment_date,
-         total_amount, order_number, status, total, tax, discount, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
-    ");
-    $stmt->execute([
-        $customer_name, $customer_email, $contact_number,
-        $job_address, $appointment_date, $subtotal_after_discount,
-        $order_number, 'pending', $grand_total, $tax, $discount
-    ]);
-
-    $order_id = $pdo->lastInsertId();
-
-    // ============================
-    // 5. INSERT ORDER ITEMS
-    // ============================
-    $stmt_item = $pdo->prepare("
-        INSERT INTO order_items
-        (order_id, item_type, item_id, installation_type, qty, price, name, created_at)
-        VALUES (?,?,?,?,?,?,?,NOW())
-    ");
-
-    foreach ($items as $it) {
-        $stmt_item->execute([
-            $order_id,
-            $it['item_type'],
-            $it['item_id'] ?? null,
-            $it['installation_type'] ?? null,
-            $it['qty'],
-            $it['price'],
-            $it['name'] ?? null
+        // --- INSERT ORDER ---
+        $stmt = $pdo->prepare(
+            "INSERT INTO orders 
+            (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())"
+        );
+        $stmt->execute([
+            $customer_name, $customer_email, $contact_number,
+            $job_address, $appointment_date, $subtotal,
+            $order_number, 'pending', $grand_total, $tax, $discount
         ]);
-    }
+        $order_id = $pdo->lastInsertId();
 
-    // ============================
-    // 6. INSERT DISPATCH (Personnel Only)
-    // ============================
-    if (!empty($_POST['personnel_hours'])) {
-        $stmt_dispatch = $pdo->prepare("
-            INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
-            VALUES (?, ?, ?, ?, NOW())
-        ");
+        // --- INSERT ORDER ITEMS ---
+        $stmt_item = $pdo->prepare(
+            "INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at)
+             VALUES (?,?,?,?,?,?,NOW())"
+        );
+        foreach ($items as $it) {
+            $stmt_item->execute([
+                $order_id, $it['item_type'], $it['item_id'] ?? null,
+                $it['installation_type'] ?? null, (int)$it['qty'], $it['price']
+            ]);
+        }
 
-        foreach ($_POST['personnel_hours'] as $pid => $hours) {
-            $hours = floatval($hours);
-            $date  = $_POST['personnel_date'][$pid] ?? date("Y-m-d");
-
-            if ($hours > 0) {
-                $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
+        // --- INSERT PERSONNEL DISPATCH ---
+        if (!empty($_POST['personnel_hours'])) {
+            $stmt_dispatch = $pdo->prepare(
+                "INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
+                 VALUES (?, ?, ?, ?, NOW())"
+            );
+            foreach ($_POST['personnel_hours'] as $pid => $hours) {
+                $hours = floatval($hours);
+                $date = $_POST['personnel_date'][$pid] ?? date('Y-m-d');
+                if ($hours > 0) {
+                    $stmt_dispatch->execute([$order_id, $pid, $date, $hours]);
+                }
             }
         }
+
+        $pdo->commit();
+        header("Location: review_order.php?order_id=".$order_id);
+        exit;
+
+    } catch(Exception $e) {
+        $pdo->rollBack();
+        $message = 'Error saving order: '.$e->getMessage();
     }
-
-    // ============================
-    // 7. DONE!
-    // ============================
-    $pdo->commit();
-    header("Location: review_order.php?order_id=" . $order_id);
-    exit;
-
-} catch (Exception $e) {
-
-    $pdo->rollBack();
-    echo "<h2>Error: " . $e->getMessage() . "</h2>";
 }
 
 
