@@ -29,16 +29,13 @@ $groupedItems = [
 ];
 
 foreach ($itemsRaw as $item) {
-
-    $name = '';
-    $price = $item['price'] !== null ? floatval($item['price']) : 0;
-    $qty   = $item['qty'] !== null ? intval($item['qty']) : 1;
-    $cost  = $item['cost'] !== null ? floatval($item['cost']) : null;
-
-    $type = $item['item_type'] ?? 'expense';
+    $name  = '';
+    $price = isset($item['price']) ? floatval($item['price']) : 0;
+    $qty   = isset($item['qty']) ? intval($item['qty']) : 1;
+    $cost  = isset($item['cost']) ? floatval($item['cost']) : null;
+    $type  = $item['item_type'] ?? 'expense';
 
     switch ($type) {
-
         case 'product':
             $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
             $stmtName->execute([$item['item_id']]);
@@ -46,36 +43,28 @@ foreach ($itemsRaw as $item) {
             break;
 
         case 'installation':
-
-            if ($item['installation_type'] === 'split') {
+            if (($item['installation_type'] ?? '') === 'split') {
                 $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
                 $stmtName->execute([$item['item_id']]);
                 $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
-
-                // GROUP CORRECTLY
                 $type = 'split';
-
             } else {
                 $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
                 $stmtName->execute([$item['item_id']]);
                 $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
-
                 $name .= " (" . ($item['installation_type'] ?? '') . ")";
-
-                // GROUP CORRECTLY
                 $type = 'ducted';
             }
             break;
 
         case 'personnel':
-
-            // FIXED — ONLY MATCH USING technician_uuid
+            // FIXED: Bind correct number of parameters
             $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-            $stmtName->execute([$item['item_id']]);
+            $stmtName->execute([$item['item_id'], $item['item_id']]);
             $row = $stmtName->fetch(PDO::FETCH_ASSOC);
 
             $name  = $row['name'] ?? 'Unknown Personnel';
-            $price = $row['rate'] ?? 0;    // ✔ use the correct rate
+            $price = isset($row['rate']) ? floatval($row['rate']) : 0;
             break;
 
         case 'equipment':
@@ -95,15 +84,13 @@ foreach ($itemsRaw as $item) {
         $cost = $price * 0.70;
     }
 
-    // Final normalized item
     $normalized = [
         'name'  => $name,
         'price' => $price,
         'qty'   => $qty,
-        'cost'  => $cost,
+        'cost'  => $cost
     ] + $item;
 
-    // PLACE IN CORRECT GROUP
     if (!isset($groupedItems[$type])) {
         $type = 'expense';
     }
@@ -111,37 +98,35 @@ foreach ($itemsRaw as $item) {
     $groupedItems[$type][] = $normalized;
 }
 
-
 // ==========================
 // CALCULATE TOTALS
 // ==========================
 $subtotal = 0;
 $total_cost = 0;
 
-// Loop through all grouped items to calculate subtotal
 foreach ($groupedItems as $type => $items) {
     foreach ($items as $item) {
-        $subtotal += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
+        $subtotal   += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
         $total_cost += ($item['cost'] ?? 0) * ($item['qty'] ?? 1);
     }
 }
 
-$tax = round($subtotal * 0.10, 2);
+$tax         = round($subtotal * 0.10, 2);
 $grand_total = $subtotal + $tax;
 
-$profit = $subtotal - $total_cost;
+$profit         = $subtotal - $total_cost;
 $percent_margin = $subtotal > 0 ? ($profit / $subtotal) * 100 : 0;
-$net_profit = $subtotal > 0 ? (($profit - $tax) / $subtotal) * 100 : 0;
-$total_profit = $profit;
+$net_profit     = $subtotal > 0 ? (($profit - $tax) / $subtotal) * 100 : 0;
+$total_profit   = $profit;
 
 ob_start();
 ?>
 
+<!-- HTML CONTENT -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     <!-- LEFT SECTION -->
     <div class="lg:col-span-2 space-y-6">
-
         <!-- ORDER HEADER -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
@@ -168,53 +153,51 @@ ob_start();
         </div>
 
         <!-- GROUPED ITEMS -->
-        <?php 
+        <?php
         $titles = [
-            'products'=>'Ordered Products',
-            'split'=>'Split Installations',
-            'ducted'=>'Ducted Installations',
-            'personnel'=>'Personnel',
-            'equipment'=>'Equipment',
-            'expense'=>'Other Expenses'
+            'products' => 'Ordered Products',
+            'split'    => 'Split Installations',
+            'ducted'   => 'Ducted Installations',
+            'personnel'=> 'Personnel',
+            'equipment'=> 'Equipment',
+            'expense'  => 'Other Expenses'
         ];
         ?>
         <?php foreach ($titles as $key => $title): ?>
             <?php if (!empty($groupedItems[$key])): ?>
-            <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-                <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= $title ?></h3>
-                <div class="overflow-auto rounded-xl border border-gray-200">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-100 text-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left">Item</th>
-                                <th class="px-4 py-3 text-center">Price</th>
-                                <th class="px-4 py-3 text-center">Quantity/Hours</th>
-                                <th class="px-4 py-3 text-right">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($groupedItems[$key] as $item):
-                            $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
-                        ?>
-                            <tr class="border-t hover:bg-gray-50">
-                                <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
-                                <td class="px-4 py-3 text-center"><?= number_format($item['price'] ?? 0, 2) ?></td>
-                                <td class="px-4 py-3 text-center"><?= $item['qty'] ?? 1 ?></td>
-                                <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= $title ?></h3>
+                    <div class="overflow-auto rounded-xl border border-gray-200">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 text-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Item</th>
+                                    <th class="px-4 py-3 text-center">Price</th>
+                                    <th class="px-4 py-3 text-center">Quantity/Hours</th>
+                                    <th class="px-4 py-3 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($groupedItems[$key] as $item):
+                                    $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
+                                ?>
+                                    <tr class="border-t hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
+                                        <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
+                                        <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
+                                        <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
             <?php endif; ?>
         <?php endforeach; ?>
-
     </div>
 
     <!-- SUMMARY PANEL -->
     <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
-        <!-- PROFIT CARD -->
         <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
             <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
             <div class="flex justify-between text-gray-600 mb-1">
@@ -235,7 +218,6 @@ ob_start();
             </div>
         </div>
 
-        <!-- TOTALS -->
         <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
             <div class="flex justify-between text-gray-700">
                 <span>Subtotal</span>
@@ -251,13 +233,11 @@ ob_start();
             </div>
         </div>
 
-        <!-- SEND EMAIL BUTTON -->
-        <button type="button" 
-            id="openEmailModal" 
-            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
-            data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-            data-order-id="<?= $order_id ?>"
-            data-grand-total="<?= number_format($grand_total, 2) ?>">
+        <!-- Buttons -->
+        <button type="button" id="openEmailModal" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
+                data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+                data-order-id="<?= $order_id ?>"
+                data-grand-total="<?= number_format($grand_total, 2) ?>">
             Send to Email
         </button>
 
@@ -274,7 +254,6 @@ ob_start();
                 Send Order to ServiceM8
             </button>
         </form>
-
     </div>
 </div>
 
