@@ -388,17 +388,10 @@ document.addEventListener("DOMContentLoaded",function(){
 
   // --------------------------
   // Initialize Flatpickr and disable booked dates
-fetch('/fetch_dispatch.php')
+// Initialize Flatpickr for personnel dates
+fetch('/fetch_personnel_booked.php')
   .then(res => res.json())
-  .then(data => {
-      // data format: [{day: 'YYYY-MM-DD', personnel: 'Name', ...}]
-      const bookedDates = {};
-      data.forEach(d => {
-          const pid = d.personnel_id; // ensure fetch_dispatch returns personnel_id
-          if (!bookedDates[pid]) bookedDates[pid] = [];
-          bookedDates[pid].push(d.day); // use "day" or "date" field
-      });
-
+  .then(bookedDates => {
       document.querySelectorAll(".personnel-date").forEach(input => {
           const pid = input.dataset.personnelId;
           const disabledDates = bookedDates[pid] || [];
@@ -407,6 +400,7 @@ fetch('/fetch_dispatch.php')
               dateFormat: "Y-m-d",
               minDate: "today",
               disable: disabledDates,
+              allowInput: false, // optional: prevent manual typing
               onChange: function(selectedDates, dateStr){
                   if(disabledDates.includes(dateStr)){
                       alert("This date is already booked for this personnel.");
@@ -416,7 +410,6 @@ fetch('/fetch_dispatch.php')
           });
       });
   });
-
   updateSummary();
 });
 </script>
