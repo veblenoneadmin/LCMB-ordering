@@ -225,12 +225,7 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
 <td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
 <td class="p-2 text-center">
-<input type="text" 
-       name="personnel_date[<?= $pid ?>]" 
-       class="personnel-date w-full text-center" 
-       data-personnel-id="<?= $pid ?>" 
-       placeholder="YYYY-MM-DD">
-
+<input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>" placeholder="YYYY-MM-DD">
 </td>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
@@ -274,14 +269,14 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* keeps responsiveness */
 }
 
 .create-order-right {
     position: sticky;
     top: 24px;
-    width: 360px;
-    flex-shrink: 0;
+    width: 360px;       /* fixed width for right panel */
+    flex-shrink: 0;     /* prevent shrinking */
     align-self: flex-start;
 }
 
@@ -290,16 +285,13 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
         flex-direction: column;
     }
     .create-order-right {
-        width: 100%;
-        position: relative;
+        width: 100%;    /* full width on mobile */
+        position: relative; /* remove sticky on small screens */
     }
 }
 </style>
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
-<script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
 
-<!-- JS for quantity, subtotal, summary, and Flatpickr personnel -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- JS for quantity, subtotal, summary, and Flatpickr for personnel -->
 <script>
 document.addEventListener("DOMContentLoaded",function(){
   function parseFloatSafe(v){return parseFloat(v)||0;}
@@ -367,9 +359,7 @@ document.addEventListener("DOMContentLoaded",function(){
       });
   });
 
-  document.querySelectorAll(".qty-input").forEach(input=>{
-      input.addEventListener('input',()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });
-  });
+  document.querySelectorAll(".qty-input").forEach(input=>{input.addEventListener('input',()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });});
 
   // Other Expenses
   document.getElementById("addExpenseBtn").addEventListener("click",function(){
@@ -377,54 +367,32 @@ document.addEventListener("DOMContentLoaded",function(){
       const div=document.createElement("div");
       div.className="flex gap-2 mb-2";
       div.innerHTML=`
-          <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
-          <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
-          <button type="button" class="qbtn remove-expense">Remove</button>
+        <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
+        <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
+        <button type="button" class="qbtn remove-expense">Remove</button>
       `;
       container.appendChild(div);
 
-      div.querySelector(".remove-expense").addEventListener("click",function(){
-          div.remove();
-          updateSummary();
-      });
-
+      div.querySelector(".remove-expense").addEventListener("click",function(){ div.remove(); updateSummary(); });
       div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
   });
 
-  document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>inp.addEventListener("input", updateSummary));
-
   // --------------------------
- // --------------------------
-// Personnel date picker using Pikaday
-// --------------------------
-fetch('fetch_personnel_booked.php')
-  .then(res => res.json())
-  .then(bookedDates => {
-      document.querySelectorAll(".personnel-date").forEach(input => {
-          const pid = input.dataset.personnelId;
-          const disabled = bookedDates[pid] || [];
-
-          new Pikaday({
-              field: input,
-              format: 'YYYY-MM-DD',
-              minDate: new Date(),
-              onSelect: function(date) {
-                  const dStr = this.getMoment().format('YYYY-MM-DD');
-                  if(disabled.includes(dStr)){
-                      alert("This date is already booked for this personnel.");
-                      input.value = '';
-                  }
-              },
-              toString(date) {
-                  return moment(date).format('YYYY-MM-DD');
-              },
-              isDisabled(date) {
-                  const dStr = moment(date).format('YYYY-MM-DD');
-                  return disabled.includes(dStr);
-              }
-          });
-      });
+  // Flatpickr for personnel dates
+  // --------------------------
+  document.querySelectorAll(".personnel-date").forEach(input => {
+      const pid = input.dataset.personnelId;
+      fetch('/path/to/get_personnel_booked_dates.php?personnel_id=' + pid)
+        .then(res => res.json())
+        .then(bookedDates => {
+            flatpickr(input, {
+                dateFormat: "Y-m-d",
+                minDate: "today",
+                disable: bookedDates || []
+            });
+        });
   });
+
   updateSummary();
 });
 </script>
