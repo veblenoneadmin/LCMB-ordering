@@ -1,141 +1,114 @@
 <?php
-// create_order.php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-$message = '';
-
 // Fetch data safely
-function safeFetch($pdo, $query){
-    try { return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC); }
-    catch(Exception $e){ return []; }
-}
+$products = $pdo->query("SELECT id,name,price,category FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$split_installations = $pdo->query("SELECT id,item_name AS name,unit_price AS price,category FROM split_installation ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$ducted_installations = $pdo->query("SELECT id,equipment_name AS name,total_cost AS price,category FROM ductedinstallations ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$personnel = $pdo->query("SELECT id,name,rate,category FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$equipment = $pdo->query("SELECT id,item AS name,rate,category FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-$products = safeFetch($pdo, "SELECT id, name, price, category FROM products ORDER BY name ASC");
-$split_installations = safeFetch($pdo, "SELECT id, item_name AS name, unit_price AS price, category FROM split_installation ORDER BY item_name ASC");
-$ducted_installations = safeFetch($pdo, "SELECT id, equipment_name AS name, total_cost AS price, category FROM ductedinstallations ORDER BY equipment_name ASC");
-$personnel = safeFetch($pdo, "SELECT id, name, rate, category FROM personnel ORDER BY name ASC");
-$equipment = safeFetch($pdo, "SELECT id, item AS name, rate, category FROM equipment ORDER BY item ASC");
+$message = '';
+function f2($v){ return number_format((float)$v,2,'.',''); }
 
-function f2($v){ return number_format((float)$v, 2, '.', ''); }
-
-// Handle POST
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $customer_name = trim($_POST['customer_name'] ?? '');
     $customer_email = trim($_POST['customer_email'] ?? '');
     $contact_number = trim($_POST['contact_number'] ?? '');
     $job_address = trim($_POST['job_address'] ?? '');
-    $appointment_date = $_POST['appointment_date'] ?? null;
+    $appointment_date = $_POST['appointment_date'] ?: null;
 
     $items = [];
 
-    // Products
-    foreach($_POST['product'] ?? [] as $pid => $qty){
-        $qty = intval($qty);
-        if($qty > 0){
-            $stmt = $pdo->prepare("SELECT price FROM products WHERE id=? LIMIT 1");
-            $stmt->execute([$pid]);
-            $price = (float)$stmt->fetchColumn();
-            $items[] = ['item_type'=>'product','item_id'=>$pid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
-        }
-    }
-
-    // Split Installation
-    foreach($_POST['split'] ?? [] as $sid => $qty){
-        $qty = intval($qty);
+    // PRODUCTS
+    foreach($_POST['product'] ?? [] as $pid=>$qty){
+        $qty=intval($qty);
         if($qty>0){
-            $stmt = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id=? LIMIT 1");
-            $stmt->execute([$sid]);
-            $price = (float)$stmt->fetchColumn();
-            $items[] = ['item_type'=>'installation','item_id'=>$sid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
+            $price = (float)$pdo->query("SELECT price FROM products WHERE id=".intval($pid))->fetchColumn();
+            $items[]=['item_type'=>'product','item_id'=>$pid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
         }
     }
 
-    // Ducted Installation
+    // SPLIT INSTALLATIONS
+    foreach($_POST['split'] ?? [] as $sid=>$qty){
+        $qty=intval($qty);
+        if($qty>0){
+            $price = (float)$pdo->query("SELECT unit_price FROM split_installation WHERE id=".intval($sid))->fetchColumn();
+            $items[]=['item_type'=>'installation','item_id'=>$sid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
+        }
+    }
+
+    // DUCTED INSTALLATIONS
     foreach($_POST['ducted'] ?? [] as $did=>$data){
-        $qty = intval($data['qty']??0);
-        $type = $data['type'] ?? 'indoor';
+        $qty=intval($data['qty'] ?? 0);
+        $type=$data['type'] ?? 'indoor';
         if($qty>0){
-            $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
-            $stmt->execute([$did]);
-            $price = (float)$stmt->fetchColumn();
-            $items[] = ['item_type'=>'installation','item_id'=>$did,'installation_type'=>in_array($type,['indoor','outdoor'])?$type:'indoor','qty'=>$qty,'price'=>$price];
+            $price=(float)$pdo->query("SELECT total_cost FROM ductedinstallations WHERE id=".intval($did))->fetchColumn();
+            $items[]=[
+                'item_type'=>'installation',
+                'item_id'=>$did,
+                'installation_type'=>in_array($type,['indoor','outdoor'])?$type:'indoor',
+                'qty'=>$qty,
+                'price'=>$price
+            ];
         }
     }
 
-    // Equipment
-    foreach($_POST['equipment'] ?? [] as $eid => $qty){
-        $qty = intval($qty);
+    // EQUIPMENT
+    foreach($_POST['equipment'] ?? [] as $eid=>$qty){
+        $qty=intval($qty);
         if($qty>0){
-            $stmt = $pdo->prepare("SELECT rate FROM equipment WHERE id=? LIMIT 1");
-            $stmt->execute([$eid]);
-            $rate = (float)$stmt->fetchColumn();
-            $items[] = ['item_type'=>'equipment','item_id'=>$eid,'installation_type'=>null,'qty'=>$qty,'price'=>$rate];
+            $price=(float)$pdo->query("SELECT rate FROM equipment WHERE id=".intval($eid))->fetchColumn();
+            $items[]=['item_type'=>'equipment','item_id'=>$eid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
         }
     }
 
-    // Other Expenses
-    $other_names = $_POST['other_expense_name'] ?? [];
-    $other_amounts = $_POST['other_expense_amount'] ?? [];
+    // OTHER EXPENSES
+    $other_names=$_POST['other_expense_name'] ?? [];
+    $other_amounts=$_POST['other_expense_amount'] ?? [];
     foreach($other_amounts as $i=>$amt){
-        $amt = floatval($amt);
-        $name = trim($other_names[$i] ?? '');
+        $amt=floatval($amt);
+        $name=trim($other_names[$i] ?? '');
         if($amt>0){
-            $items[] = ['item_type'=>'expense','item_id'=>0,'installation_type'=>$name ?: 'Other expense','qty'=>1,'price'=>$amt];
+            $items[]=['item_type'=>'expense','item_id'=>0,'installation_type'=>$name ?: 'Other Expense','qty'=>1,'price'=>$amt];
         }
     }
 
-    // Personnel
-    $personnel_dispatch_rows = [];
-    foreach($_POST['personnel_hours'] ?? [] as $pid=>$hours_raw){
-        $hours = floatval($hours_raw);
+    // PERSONNEL
+    $personnel_dispatch=[];
+    foreach($_POST['personnel_hours'] ?? [] as $pid=>$hours){
+        $hours=floatval($hours);
         if($hours<=0) continue;
-        $stmt = $pdo->prepare("SELECT rate FROM personnel WHERE id=? LIMIT 1");
-        $stmt->execute([$pid]);
-        $rate = (float)$stmt->fetchColumn();
-        $date = $_POST['personnel_date'][$pid] ?? $appointment_date ?? date('Y-m-d');
-        $items[] = ['item_type'=>'personnel','item_id'=>$pid,'installation_type'=>null,'qty'=>$hours,'price'=>$rate];
-        $personnel_dispatch_rows[] = ['personnel_id'=>$pid,'date'=>$date,'hours'=>$hours];
+        $rate=(float)$pdo->query("SELECT rate FROM personnel WHERE id=".intval($pid))->fetchColumn();
+        $date=$_POST['personnel_date'][$pid] ?? $appointment_date ?? date('Y-m-d');
+        $items[]=['item_type'=>'personnel','item_id'=>$pid,'installation_type'=>null,'qty'=>$hours,'price'=>$rate];
+        $personnel_dispatch[]=['personnel_id'=>$pid,'date'=>$date,'hours'=>$hours];
     }
 
-    // Totals
-    $subtotal=0; foreach($items as $it) $subtotal += ($it['qty']*$it['price']);
-    $tax = round($subtotal*0.10,2);
-    $grand_total = round($subtotal+$tax,2);
-    $discount = 0.0;
-    $order_number = 'ORD'.time().rand(10,99);
+    $subtotal=0;
+    foreach($items as $it) $subtotal+=((float)$it['qty']*(float)$it['price']);
+    $tax=round($subtotal*0.10,2);
+    $grand_total=round($subtotal+$tax,2);
+    $discount=0.00;
+    $order_number='ORD'.time().rand(10,99);
 
     try{
         $pdo->beginTransaction();
+        $stmt=$pdo->prepare("INSERT INTO orders (customer_name,customer_email,contact_number,job_address,appointment_date,total_amount,order_number,status,total,tax,discount,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())");
+        $stmt->execute([$customer_name,$customer_email,$contact_number,$job_address,$appointment_date ?: null,f2($subtotal),$order_number,'pending',f2($grand_total),f2($tax),f2($discount)]);
+        $order_id=$pdo->lastInsertId();
 
-        $stmt = $pdo->prepare("
-            INSERT INTO orders
-            (customer_name, customer_email, contact_number, job_address, appointment_date, total_amount, order_number, status, total, tax, discount, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
-        ");
-        $stmt->execute([$customer_name,$customer_email,$contact_number,$job_address,$appointment_date,$subtotal,$order_number,'pending',$grand_total,$tax,$discount]);
-        $order_id = $pdo->lastInsertId();
-
-        // Insert items
-        $stmt_item = $pdo->prepare("INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at) VALUES (?,?,?,?,?,?,NOW())");
+        $stmt_item=$pdo->prepare("INSERT INTO order_items (order_id,item_type,item_id,installation_type,qty,price,created_at) VALUES (?,?,?,?,?,?,NOW())");
         foreach($items as $it){
-            $stmt_item->execute([
-                $order_id,
-                $it['item_type'],
-                $it['item_id']??null,
-                $it['installation_type']??null,
-                $it['qty'],
-                f2($it['price'])
-            ]);
+            $stmt_item->execute([$order_id,$it['item_type'],$it['item_id'],$it['installation_type'],$it['qty'],f2($it['price'])]);
         }
 
-        // Dispatch rows
-        if(!empty($personnel_dispatch_rows)){
-            $stmt_dispatch = $pdo->prepare("INSERT INTO dispatch (order_id,personnel_id,date,hours,created_at) VALUES (?,?,?,?,NOW())");
-            foreach($personnel_dispatch_rows as $r){
-                $d = $r['date'] ?: date('Y-m-d');
-                if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$d)) $d = date('Y-m-d');
-                $stmt_dispatch->execute([$order_id,$r['personnel_id'],$d,f2($r['hours'])]);
+        // Dispatch
+        if(!empty($personnel_dispatch)){
+            $stmt_disp=$pdo->prepare("INSERT INTO dispatch (order_id,personnel_id,date,hours,created_at) VALUES (?,?,?,?,NOW())");
+            foreach($personnel_dispatch as $d){
+                $stmt_disp->execute([$order_id,$d['personnel_id'],$d['date'],f2($d['hours'])]);
             }
         }
 
@@ -144,19 +117,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         exit;
     }catch(Exception $e){
         $pdo->rollBack();
-        $message = 'Error saving order: '.$e->getMessage();
+        $message='Error saving order: '.$e->getMessage();
     }
 }
+ob_start();
 ?>
 
-<?php ob_start(); ?>
-<?php if($message): ?>
-<div class="alert" style="padding:10px;background:#fee;border:1px solid #fbb;margin-bottom:12px;">
-    <?= htmlspecialchars($message) ?>
-</div>
-<?php endif; ?>
-
-<form method="post" class="create-order-grid" id="orderForm" novalidate>
+<!-- HTML form (Products table example, all tables same style) -->
+<form method="post" class="create-order-grid" novalidate>
 <div class="flex-1 flex flex-col gap-6">
 
 <!-- CLIENT INFO -->
@@ -172,26 +140,33 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 
 <!-- PRODUCTS TABLE -->
-<?php
-function render_table($items,$input_name_prefix,$qty_class='qty-input',$price_field='price'){
-?>
+<?php function render_table($title,$items,$type='product',$show_type=false){ ?>
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
 <div class="flex items-center justify-between mb-3">
-<span class="font-medium text-gray-700"><?= $items[0]['category'] ?? 'Items' ?></span>
-<input type="text" class="search-input" placeholder="Search..." >
+<span class="font-medium text-gray-700"><?= $title ?></span>
+<input class="search-input" placeholder="Search..." oninput="searchTable(this)">
 </div>
 <div class="overflow-y-auto max-h-64 border rounded-lg">
 <table class="products-table w-full border-collapse text-sm">
-<thead class="bg-gray-100 sticky top-0"><tr><th>Name</th><th class="text-center">Price</th><th class="text-center">Qty</th><th class="text-center">Subtotal</th></tr></thead>
+<thead class="bg-gray-100 sticky top-0">
+<tr>
+<th class="p-2 text-left">Name</th>
+<?php if($show_type) echo '<th class="p-2 text-left">Type</th>'; ?>
+<th class="p-2 text-center">Price</th>
+<th class="p-2 text-center">Qty</th>
+<th class="p-2 text-center">Subtotal</th>
+</tr>
+</thead>
 <tbody>
 <?php foreach($items as $i): $id=(int)$i['id']; ?>
 <tr class="border-b">
 <td class="product-name p-2"><?= htmlspecialchars($i['name']) ?></td>
-<td class="p-2 text-center">$<span class="prod-price"><?= number_format($i[$price_field],2) ?></span></td>
+<?php if($show_type) echo '<td class="p-2">'.htmlspecialchars($i['category'] ?? '').'</td>'; ?>
+<td class="p-2 text-center">$<span class="prod-price"><?= f2($i['price'] ?? $i['rate']) ?></span></td>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
 <button type="button" class="qtbn minus">-</button>
-<input type="number" min="0" value="0" name="<?= $input_name_prefix ?>[<?= $id ?>]" class="<?= $qty_class ?>" data-price="<?= htmlspecialchars($i[$price_field]) ?>">
+<input type="number" min="0" value="0" name="<?= $type ?>[<?= $id ?>]" class="qty-input" data-price="<?= htmlspecialchars($i['price'] ?? $i['rate']) ?>">
 <button type="button" class="qtbn plus">+</button>
 </div>
 </td>
@@ -202,47 +177,15 @@ function render_table($items,$input_name_prefix,$qty_class='qty-input',$price_fi
 </table>
 </div>
 </div>
-<?php
-}
-render_table($products,'product');
-render_table($split_installations,'split','qty-input split-qty','price');
-render_table($ducted_installations,'ducted','qty-input ducted-qty','price');
-render_table($equipment,'equipment','qty-input equip-input','rate');
-?>
+<?php } ?>
 
-<!-- PERSONNEL -->
-<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-<div class="flex items-center justify-between mb-3">
-<span class="font-medium text-gray-700">Personnel</span>
-<input type="text" id="personnelSearch" class="search-input" placeholder="Search personnel...">
-</div>
-<div class="overflow-y-auto max-h-64 border rounded-lg">
-<table class="personnel-table w-full border-collapse text-sm">
-<thead class="bg-gray-100 sticky top-0"><tr><th>Name</th><th>Rate</th><th>Date</th><th>Hours</th><th>Subtotal</th></tr></thead>
-<tbody>
-<?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
-<tr data-id="<?= $pid ?>" class="border-b text-center">
-<td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
-<td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
-<td class="p-2 text-center">
-<input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>">
-</td>
-<td class="p-2 text-center">
-<div class="qty-wrapper">
-<button type="button" class="qtbn hour-minus">-</button>
-<input type="number" min="0" value="0" name="personnel_hours[<?= $pid ?>]" class="qty-input pers-hours" data-rate="<?= htmlspecialchars($p['rate']) ?>">
-<button type="button" class="qtbn hour-plus">+</button>
-</div>
-</td>
-<td class="p-2">$<span class="pers-subtotal">0.00</span></td>
-</tr>
-<?php endforeach; ?>
-</tbody>
-</table>
-</div>
-</div>
+<?php render_table('Material',$products,'product'); ?>
+<?php render_table('Split System Installation',$split_installations,'split'); ?>
+<?php render_table('Ducted Installation',$ducted_installations,'ducted',true); ?>
+<?php render_table('Personnel',$personnel,'personnel',true); ?>
+<?php render_table('Equipment',$equipment,'equipment'); ?>
 
-<!-- OTHER EXPENSES -->
+<!-- Other Expenses -->
 <div class="bg-white p-4 rounded-xl shadow mb-4">
 <span class="font-medium text-gray-700 mb-2">Other Expenses</span>
 <div id="otherExpensesContainer"></div>
@@ -263,6 +206,19 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 </div>
 </div>
 </form>
+
+<!-- CSS -->
+<style>
+.create-order-grid { display:flex; gap:20px; align-items:flex-start; flex-wrap:nowrap; }
+.create-order-right { position:sticky; top:24px; width:360px; flex-shrink:0; align-self:flex-start; }
+.products-table td, .products-table th { vertical-align: middle; }
+.empty-note { color:#7e8796; font-size:13px; text-align:center; padding:12px 0; }
+.qty-box input.qty-input { width:72px; text-align:center; }
+@media(max-width:1000px){
+.create-order-grid{flex-direction:column;}
+.create-order-right{width:100%;}
+}
+</style>
 
 <!-- JS for quantity, subtotal, summary, and disable booked dates -->
 <script>
