@@ -163,55 +163,49 @@ ob_start();
             </div>
         </div>
 
-        <!-- GROUPED ITEMS DISPLAY -->
-<div class="bg-white shadow p-4 rounded-xl mt-6">
-    <h2 class="text-lg font-bold mb-4">Order Summary</h2>
-
-    <?php
-    $sections = [
-        'products'  => 'Ordered Products',
-        'split'     => 'Split Installation',
-        'ducted'    => 'Ducted Installation',
-        'personnel' => 'Personnel',
-        'equipment' => 'Equipment',
-        'expense'   => 'Other Expenses'
-    ];
-
-    foreach ($sections as $key => $label):
-        $items = $groupedItems[$key];
-        if (empty($items)) continue;
-    ?>
-        <div class="mb-6">
-            <h3 class="text-md font-semibold text-gray-700 mb-2"><?= $label ?></h3>
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b">
-                        <th class="text-left py-2">Item</th>
-                        <th class="text-left py-2">Qty</th>
-                        <th class="text-left py-2">Price</th>
-                        <th class="text-left py-2">Cost</th>
-                        <th class="text-left py-2">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($items as $i): ?>
-                    <tr class="border-b">
-                        <td class="py-2"><?= htmlspecialchars($i['name']) ?></td>
-                        <td class="py-2"><?= $i['qty'] ?></td>
-                        <td class="py-2">₱<?= number_format($i['price'], 2) ?></td>
-                        <td class="py-2">₱<?= number_format($i['cost'], 2) ?></td>
-                        <td class="py-2 font-semibold">
-                            ₱<?= number_format($i['price'] * $i['qty'], 2) ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php endforeach; ?>
-
-</div>
-
+        <!-- GROUPED ITEMS -->
+        <?php
+        $titles = [
+            'products' => 'Ordered Products',
+            'split'    => 'Split Installations',
+            'ducted'   => 'Ducted Installations',
+            'personnel'=> 'Personnel',
+            'equipment'=> 'Equipment',
+            'expense'  => 'Other Expenses'
+        ];
+        ?>
+        <?php foreach ($titles as $key => $title): ?>
+            <?php if (!empty($groupedItems[$key])): ?>
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= $title ?></h3>
+                    <div class="overflow-auto rounded-xl border border-gray-200">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 text-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Item</th>
+                                    <th class="px-4 py-3 text-center">Price</th>
+                                    <th class="px-4 py-3 text-center">Quantity/Hours</th>
+                                    <th class="px-4 py-3 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($groupedItems[$key] as $item):
+                                    $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
+                                ?>
+                                    <tr class="border-t hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
+                                        <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
+                                        <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
+                                        <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </div>
 
     <!-- SUMMARY PANEL -->
     <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
