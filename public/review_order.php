@@ -262,10 +262,11 @@ ob_start();
     <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
         <form method="post" id="emailForm">
-            <input type="hidden" name="order_id" id="orderIdInput" value="<?= $order_id ?>">
-            <input type="hidden" name="customer_email" id="emailInput" value="<?= htmlspecialchars($order['customer_email'] ?? '') ?>">
-            <input type="hidden" name="customer_name" id="customerNameInput" value="<?= htmlspecialchars($order['customer_name'] ?? '') ?>">
-            <input type="hidden" name="total" id="totalInput" value="<?= number_format($grand_total, 2) ?>">
+            <input type="email" id="emailInput" name="recipient" required>
+            <input type="text" id="customerNameInput" name="customer_name" readonly>
+            <input type="text" id="totalInput" name="total" readonly>
+            <input type="hidden" id="orderIdInput" name="order_id">
+
 
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">To:</label>
@@ -288,25 +289,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const openBtn = document.getElementById('openEmailModal');
     const modal = document.getElementById('emailModal');
     const closeBtn = document.getElementById('closeEmailModal');
+
     const emailInput = document.getElementById('emailInput');
     const customerNameInput = document.getElementById('customerNameInput');
     const totalInput = document.getElementById('totalInput');
-    const recipientField = document.getElementById('recipientField');
+    const orderIdInput = document.getElementById('orderIdInput');
+
     const subjectField = document.getElementById('subjectField');
 
+    // Open modal
     openBtn.addEventListener('click', () => {
-        recipientField.value = openBtn.getAttribute('data-client-email') || '';
-        subjectField.value = `Order #${openBtn.getAttribute('data-order-id')} Details`;
-        modal.classList.remove('hidden');
+        emailInput.value = openBtn.getAttribute('data-customer-email') || '';
+        customerNameInput.value = openBtn.getAttribute('data-customer-name') || '';
+        totalInput.value = openBtn.getAttribute('data-total') || '';
+        orderIdInput.value = openBtn.getAttribute('data-order-id') || '';
+        subjectField.value = `Order #${orderIdInput.value} Details`;
+
+        modal.classList.remove('hidden'); // Show modal
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     });
 
-    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('opacity-100');
+    });
 
+    // Submit form
     document.getElementById('emailForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const payload = {
-            order_id: openBtn.getAttribute('data-order-id'),
+            order_id: orderIdInput.value,
             customer_email: emailInput.value,
             customer_name: customerNameInput.value,
             total: totalInput.value
@@ -320,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(() => {
             alert('Email request sent to n8n successfully!');
             modal.classList.add('hidden');
+            modal.classList.remove('opacity-100');
         })
         .catch(err => {
             console.error(err);
@@ -327,6 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
 </script>
 
 <?php
