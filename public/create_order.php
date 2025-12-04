@@ -225,8 +225,7 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
 <td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
 <td class="p-2 text-center">
-<input type="date" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>">
-</td>
+<input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>" placeholder="YYYY-MM-DD" readonly>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
 <button type="button" class="qtbn hour-minus">-</button>
@@ -389,29 +388,33 @@ document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>i
 // --------------------------
 // Disable booked dates in personnel
 // --------------------------
-fetch('/fetch_dispatch.php')
-.then(res=>res.json())
-.then(data=>{
-    const bookedDatesByPersonnel={};
-    data.forEach(d=>{
-        const pid = d.personnel; // assuming personnel_name
-        const date = d.date || d.day; // adjust to actual fetch
-        if(!bookedDatesByPersonnel[pid]) bookedDatesByPersonnel[pid]=[];
-        bookedDatesByPersonnel[pid].push(date);
-    });
+  let bookedDates = {};
 
-    document.querySelectorAll(".personnel-date").forEach(input=>{
-        const pid=input.dataset.personnelId;
-        if(!pid) return;
-        const booked = bookedDatesByPersonnel[pid] || [];
-        input.addEventListener("input",function(){
-            if(booked.includes(this.value)){
-                alert("Personnel already booked on this date!");
-                this.value='';
-            }
+    // Fetch booked dates from server
+    fetch('/path/to/fetch_dispatch.php')
+    .then(res => res.json())
+    .then(data => {
+        bookedDates = data; // { personnel_id: ["YYYY-MM-DD", ...] }
+
+        // Initialize flatpickr for each personnel
+        document.querySelectorAll(".personnel-date").forEach(input => {
+            const pid = input.dataset.personnelId;
+            const disableDates = bookedDates[pid] || [];
+
+            flatpickr(input, {
+                dateFormat: "Y-m-d",
+                disable: disableDates,
+                minDate: "today",
+                onChange: function(selectedDates, dateStr) {
+                    if (disableDates.includes(dateStr)) {
+                        alert("This date is already booked for this personnel.");
+                        input.value = "";
+                    }
+                }
+            });
         });
     });
-});
+
 
 updateSummary();
 });
