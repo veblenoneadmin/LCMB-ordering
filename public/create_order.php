@@ -290,6 +290,8 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
     }
 }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <!-- JS for quantity, subtotal, summary, and Flatpickr for personnel -->
 <script>
@@ -380,28 +382,24 @@ document.addEventListener("DOMContentLoaded",function(){
   // --------------------------
   // Flatpickr for personnel dates
   // --------------------------
-  document.querySelectorAll('.personnel-date').forEach(input => {
-    const pid = input.dataset.personnelId;
-
+ document.querySelectorAll('.personnel-date').forEach(input => {
     flatpickr(input, {
         dateFormat: "Y-m-d",
         allowInput: false,
-        minDate: "today",
-
         onOpen: function(selectedDates, dateStr, instance) {
+            const pid = input.dataset.personnelId;
 
             fetch('fetch_personnel_booked.php?personnel_id=' + pid)
                 .then(res => res.json())
-                .then(data => {
+                .then(booked => {
+                    console.log("BOOKED FOR PID " + pid, booked);
 
-                    console.log("PID:", pid, "Booked dates:", data);
-
-                    instance.set("disable", data);
-                })
-                .catch(err => console.error("Fetch error:", err));
+                    instance.set('disable', booked);
+                });
         }
     });
 });
+
 
 
   updateSummary();
