@@ -388,6 +388,7 @@ document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>i
 // --------------------------
 // Disable booked dates in personnel
 // --------------------------
+document.addEventListener("DOMContentLoaded", function() {
   let bookedDates = {};
 
     // Fetch booked dates from server
