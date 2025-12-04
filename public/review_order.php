@@ -231,15 +231,17 @@ ob_start();
         </div>
 
         <!-- Buttons -->
-        <button type="button" 
-            id="openEmailModal" 
-            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
-            data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-            data-order-id="<?= $order_id ?>"
-            data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
-            data-grand-total="<?= number_format($grand_total, 2) ?>">
-            Send to Email
-        </button>
+       
+        <!-- SEND EMAIL BUTTON -->
+<button type="button" 
+        id="openEmailModal"
+        data-order-id="<?= $order_id ?>"
+        data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+        data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
+        data-total="<?= number_format($grand_total, 2) ?>"
+        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
+    Send Order via Email
+</button>
 
         <form method="post" action="send_order.php" class="mt-6">
             <input type="hidden" name="order_id" value="<?= $order_id ?>">
@@ -258,23 +260,26 @@ ob_start();
 </div>
 
 <!-- EMAIL MODAL -->
-<div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50">
+<div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity duration-300">
     <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
-        <form method="post" id="emailForm">
-            <input type="email" id="emailInput" name="recipient" required>
-            <input type="text" id="customerNameInput" name="customer_name" readonly>
-            <input type="text" id="totalInput" name="total" readonly>
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Order Email</h2>
+        <form id="emailForm">
             <input type="hidden" id="orderIdInput" name="order_id">
-
-
             <div class="mb-3">
-                <label class="block text-gray-600 font-medium mb-1">To:</label>
-                <input type="email" id="recipientField" class="w-full border rounded-xl p-2" required>
+                <label class="block text-gray-600 font-medium mb-1">To (Email)</label>
+                <input type="email" id="emailInput" name="recipient" class="w-full border rounded-xl p-2" required>
             </div>
             <div class="mb-3">
-                <label class="block text-gray-600 font-medium mb-1">Subject:</label>
-                <input type="text" id="subjectField" class="w-full border rounded-xl p-2" required>
+                <label class="block text-gray-600 font-medium mb-1">Customer Name</label>
+                <input type="text" id="customerNameInput" name="customer_name" class="w-full border rounded-xl p-2" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="block text-gray-600 font-medium mb-1">Total</label>
+                <input type="text" id="totalInput" name="total" class="w-full border rounded-xl p-2" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="block text-gray-600 font-medium mb-1">Subject</label>
+                <input type="text" id="subjectField" name="subject" class="w-full border rounded-xl p-2" required>
             </div>
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" id="closeEmailModal" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">Cancel</button>
@@ -284,17 +289,18 @@ ob_start();
     </div>
 </div>
 
+<!-- SCRIPT -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const openBtn = document.getElementById('openEmailModal');
     const modal = document.getElementById('emailModal');
+    const modalContent = document.getElementById('emailModalContent');
     const closeBtn = document.getElementById('closeEmailModal');
 
     const emailInput = document.getElementById('emailInput');
     const customerNameInput = document.getElementById('customerNameInput');
     const totalInput = document.getElementById('totalInput');
     const orderIdInput = document.getElementById('orderIdInput');
-
     const subjectField = document.getElementById('subjectField');
 
     // Open modal
@@ -305,14 +311,14 @@ document.addEventListener('DOMContentLoaded', function() {
         orderIdInput.value = openBtn.getAttribute('data-order-id') || '';
         subjectField.value = `Order #${orderIdInput.value} Details`;
 
-        modal.classList.remove('hidden'); // Show modal
-        setTimeout(() => modal.classList.add('opacity-100'), 10);
+        modal.classList.remove('hidden');
+        setTimeout(() => modalContent.classList.add('opacity-100', 'scale-100'), 10);
     });
 
     // Close modal
     closeBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
-        modal.classList.remove('opacity-100');
+        modalContent.classList.remove('opacity-100', 'scale-100');
+        setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
     // Submit form
@@ -324,6 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
             customer_name: customerNameInput.value,
             total: totalInput.value
         };
+
         fetch('https://primary-s0q-production.up.railway.app/webhook/send-order-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -332,8 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(res => res.json())
         .then(() => {
             alert('Email request sent to n8n successfully!');
-            modal.classList.add('hidden');
-            modal.classList.remove('opacity-100');
+            modalContent.classList.remove('opacity-100', 'scale-100');
+            setTimeout(() => modal.classList.add('hidden'), 300);
         })
         .catch(err => {
             console.error(err);
@@ -341,7 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
 </script>
 
 <?php
