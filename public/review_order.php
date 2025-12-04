@@ -58,11 +58,9 @@ foreach ($itemsRaw as $item) {
             break;
 
         case 'personnel':
-            // FIXED: Bind correct number of parameters
             $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
             $stmtName->execute([$item['item_id'], $item['item_id']]);
             $row = $stmtName->fetch(PDO::FETCH_ASSOC);
-
             $name  = $row['name'] ?? 'Unknown Personnel';
             $price = isset($row['rate']) ? floatval($row['rate']) : 0;
             break;
@@ -79,7 +77,6 @@ foreach ($itemsRaw as $item) {
             break;
     }
 
-    // Ensure cost always exists
     if ($cost === null || $cost == 0) {
         $cost = $price * 0.70;
     }
@@ -234,10 +231,13 @@ ob_start();
         </div>
 
         <!-- Buttons -->
-        <button type="button" id="openEmailModal" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
-                data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-                data-order-id="<?= $order_id ?>"
-                data-grand-total="<?= number_format($grand_total, 2) ?>">
+        <button type="button" 
+            id="openEmailModal" 
+            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4"
+            data-client-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+            data-order-id="<?= $order_id ?>"
+            data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
+            data-grand-total="<?= number_format($grand_total, 2) ?>">
             Send to Email
         </button>
 
@@ -261,19 +261,19 @@ ob_start();
 <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform transition-all duration-300 ease-out scale-95 opacity-0" id="emailModalContent">
         <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Email</h2>
-        <form method="post" action="send_email.php" id="emailForm">
-            <input type="hidden" name="order_id" value="<?= $order_id ?>">
+        <form method="post" id="emailForm">
+            <input type="hidden" name="order_id" id="orderIdInput" value="<?= $order_id ?>">
+            <input type="hidden" name="customer_email" id="emailInput" value="<?= htmlspecialchars($order['customer_email'] ?? '') ?>">
+            <input type="hidden" name="customer_name" id="customerNameInput" value="<?= htmlspecialchars($order['customer_name'] ?? '') ?>">
+            <input type="hidden" name="total" id="totalInput" value="<?= number_format($grand_total, 2) ?>">
+
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">To:</label>
-                <input type="email" name="recipient" class="w-full border rounded-xl p-2" placeholder="recipient@example.com" required>
+                <input type="email" id="recipientField" class="w-full border rounded-xl p-2" required>
             </div>
             <div class="mb-3">
                 <label class="block text-gray-600 font-medium mb-1">Subject:</label>
-                <input type="text" name="subject" class="w-full border rounded-xl p-2" placeholder="Email Subject" required>
-            </div>
-            <div class="mb-3">
-                <label class="block text-gray-600 font-medium mb-1">Message:</label>
-                <textarea name="message" rows="8" class="w-full border rounded-xl p-2" placeholder="Email message..." required></textarea>
+                <input type="text" id="subjectField" class="w-full border rounded-xl p-2" required>
             </div>
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" id="closeEmailModal" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">Cancel</button>
@@ -287,47 +287,44 @@ ob_start();
 document.addEventListener('DOMContentLoaded', function() {
     const openBtn = document.getElementById('openEmailModal');
     const modal = document.getElementById('emailModal');
-    const modalContent = document.getElementById('emailModalContent');
     const closeBtn = document.getElementById('closeEmailModal');
-
-    const emailInput = document.querySelector('#emailForm input[name="recipient"]');
-    const subjectInput = document.querySelector('#emailForm input[name="subject"]');
-    const messageInput = document.querySelector('#emailForm textarea[name="message"]');
+    const emailInput = document.getElementById('emailInput');
+    const customerNameInput = document.getElementById('customerNameInput');
+    const totalInput = document.getElementById('totalInput');
+    const recipientField = document.getElementById('recipientField');
+    const subjectField = document.getElementById('subjectField');
 
     openBtn.addEventListener('click', () => {
-        const clientEmail = openBtn.getAttribute('data-client-email') || '';
-        const orderId = openBtn.getAttribute('data-order-id') || '';
-        const grandTotal = openBtn.getAttribute('data-grand-total') || '0.00';
-
-        emailInput.value = clientEmail;
-        subjectInput.value = `Order #${orderId} Details`;
-
-        let message = `Hello,\n\nPlease find the details for your order #${orderId}.\n\n`;
-
-        <?php foreach ($groupedItems as $type => $items): ?>
-            <?php if (!empty($items)): ?>
-                message += "<?= ucfirst($type) ?>:\n";
-                <?php foreach ($items as $i): ?>
-                    message += "- <?= addslashes($i['name']) ?>: $<?= number_format($i['price'], 2) ?> x <?= $i['qty'] ?> = $<?= number_format($i['price'] * $i['qty'], 2) ?>\n";
-                <?php endforeach; ?>
-                message += "\n";
-            <?php endif; ?>
-        <?php endforeach; ?>
-
-        message += `Grand Total: $${grandTotal}\n\nThank you.`;
-        messageInput.value = message;
-
+        recipientField.value = openBtn.getAttribute('data-client-email') || '';
+        subjectField.value = `Order #${openBtn.getAttribute('data-order-id')} Details`;
         modal.classList.remove('hidden');
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-            modalContent.classList.add('scale-100', 'opacity-100');
-        }, 10);
+        setTimeout(() => modal.classList.add('opacity-100'), 10);
     });
 
-    closeBtn.addEventListener('click', () => {
-        modalContent.classList.remove('scale-100', 'opacity-100');
-        modalContent.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+    document.getElementById('emailForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const payload = {
+            order_id: openBtn.getAttribute('data-order-id'),
+            customer_email: emailInput.value,
+            customer_name: customerNameInput.value,
+            total: totalInput.value
+        };
+        fetch('https://primary-s0q-production.up.railway.app/webhook/send-order-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(() => {
+            alert('Email request sent to n8n successfully!');
+            modal.classList.add('hidden');
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to send email request.');
+        });
     });
 });
 </script>
