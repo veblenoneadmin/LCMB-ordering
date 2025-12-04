@@ -387,29 +387,35 @@ document.addEventListener("DOMContentLoaded",function(){
   document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>inp.addEventListener("input", updateSummary));
 
   // --------------------------
-  // Flatpickr for Personnel + Disable booked dates
-  // --------------------------
-  let bookedDates = {};
-  fetch('/fetch_dispatch.php')
-    .then(res => res.json())
-    .then(data => {
-        bookedDates = data;
-        document.querySelectorAll(".personnel-date").forEach(input=>{
-            const pid = input.dataset.personnelId;
-            const disabledDates = bookedDates[pid] || [];
-            flatpickr(input,{
-                dateFormat: "Y-m-d",
-                minDate: "today",
-                disable: disabledDates,
-                onChange: function(selectedDates, dateStr){
-                    if(disabledDates.includes(dateStr)){
-                        alert("This date is already booked for this personnel.");
-                        input.value = "";
-                    }
-                }
-            });
-        });
-    });
+  // Initialize Flatpickr and disable booked dates
+fetch('/fetch_dispatch.php')
+  .then(res => res.json())
+  .then(data => {
+      // data format: [{day: 'YYYY-MM-DD', personnel: 'Name', ...}]
+      const bookedDates = {};
+      data.forEach(d => {
+          const pid = d.personnel_id; // ensure fetch_dispatch returns personnel_id
+          if (!bookedDates[pid]) bookedDates[pid] = [];
+          bookedDates[pid].push(d.day); // use "day" or "date" field
+      });
+
+      document.querySelectorAll(".personnel-date").forEach(input => {
+          const pid = input.dataset.personnelId;
+          const disabledDates = bookedDates[pid] || [];
+
+          flatpickr(input, {
+              dateFormat: "Y-m-d",
+              minDate: "today",
+              disable: disabledDates,
+              onChange: function(selectedDates, dateStr){
+                  if(disabledDates.includes(dateStr)){
+                      alert("This date is already booked for this personnel.");
+                      input.value = "";
+                  }
+              }
+          });
+      });
+  });
 
   updateSummary();
 });
