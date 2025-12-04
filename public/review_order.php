@@ -18,9 +18,11 @@ $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
-// Organize items by type using DB category
+// ==========================
+// GROUP ITEMS
+// ==========================
 $groupedItems = [
-    'products'   => [],
+    'product'    => [],
     'split'      => [],
     'ducted'     => [],
     'personnel'  => [],
@@ -28,47 +30,34 @@ $groupedItems = [
     'expense'    => []
 ];
 
-// Map DB category to group keys
-$categoryMap = [
-    'product'             => 'products',
+// Map DB item type or category to group key
+$typeMap = [
+    'product'             => 'product',
     'split installation'  => 'split',
     'ducted installation' => 'ducted',
-    'personnel'           => 'persons', // adjust if your DB uses 'persons'
-    'equipment'           => 'equipments',
-    'other expense'       => 'additional'
+    'personnel'           => 'personnel',
+    'equipment'           => 'equipment',
+    'other expense'       => 'expense'
 ];
 
 foreach ($itemsRaw as $item) {
+    $typeKey = $typeMap[strtolower(trim($item['item_type'] ?? $item['category'] ?? 'other expense'))] ?? 'expense';
 
-    // FIX: ensure category always exists so no warnings happen
-    if (!isset($item['category']) || $item['category'] === '') {
-        $item['category'] = 'other expense';
-    }
-
-    $cat = strtolower(trim($item['category']));
-
-    $name  = '';
-    $price = isset($item['price']) ? floatval($item['price']) : 0;
-    $qty   = isset($item['qty']) ? intval($item['qty']) : 1;
-    $cost  = isset($item['cost']) ? floatval($item['cost']) : null;
-
-    // Determine group correctly
-    $type = $categoryMap[$cat] ?? 'expense';
-
-    switch ($cat) {
+    // Fetch display name based on type
+    switch ($typeKey) {
         case 'product':
             $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
             $stmtName->execute([$item['item_id']]);
             $name = $stmtName->fetchColumn() ?: 'Unknown Product';
             break;
 
-        case 'split installation':
+        case 'split':
             $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
             $stmtName->execute([$item['item_id']]);
             $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
             break;
 
-        case 'ducted installation':
+        case 'ducted':
             $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
             $stmtName->execute([$item['item_id']]);
             $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
@@ -79,7 +68,7 @@ foreach ($itemsRaw as $item) {
             $stmtName->execute([$item['item_id'], $item['item_id']]);
             $row = $stmtName->fetch(PDO::FETCH_ASSOC);
             $name  = $row['name'] ?? 'Unknown Personnel';
-            $price = isset($row['rate']) ? floatval($row['rate']) : 0;
+            $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
             break;
 
         case 'equipment':
@@ -93,21 +82,15 @@ foreach ($itemsRaw as $item) {
             break;
     }
 
-    if ($cost === null || $cost == 0) {
-        $cost = $price * 0.70;
-    }
+    $item['name'] = $name;
+    $item['qty']  = $item['qty'] ?? 1;
+    $item['price']= $item['price'] ?? 0;
 
-    $normalized = [
-        'name'  => $name,
-        'price' => $price,
-        'qty'   => $qty,
-        'cost'  => $cost
-    ] + $item;
+    // Calculate default cost if not set
+    $item['cost'] = $item['cost'] ?? ($item['price'] * 0.70);
 
-    $groupedItems[$type][] = $normalized;
+    $groupedItems[$typeKey][] = $item;
 }
-
-
 
 // ==========================
 // CALCULATE TOTALS
@@ -166,12 +149,12 @@ ob_start();
         <!-- GROUPED ITEMS -->
         <?php
         $titles = [
-            'products' => 'Ordered Products',
-            'split'    => 'Split Installations',
-            'ducted'   => 'Ducted Installations',
-            'personnel'=> 'Personnel',
-            'equipment'=> 'Equipment',
-            'expense'  => 'Other Expenses'
+            'product'   => 'Ordered Products',
+            'split'     => 'Split Installations',
+            'ducted'    => 'Ducted Installations',
+            'personnel' => 'Personnel',
+            'equipment' => 'Equipment',
+            'expense'   => 'Other Expenses'
         ];
         ?>
         <?php foreach ($titles as $key => $title): ?>
@@ -242,34 +225,32 @@ ob_start();
                 <span>Grand Total</span>
                 <span><?= number_format($grand_total, 2) ?></span>
             </div>
+
+            <!-- Buttons -->
+            <button type="button" 
+                    id="openEmailModal"
+                    data-order-id="<?= $order_id ?>"
+                    data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+                    data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
+                    data-total="<?= number_format($grand_total, 2) ?>"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
+                Send Order via Email
+            </button>
+
+            <form method="post" action="send_order.php" class="mt-6">
+                <input type="hidden" name="order_id" value="<?= $order_id ?>">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                    Send Order to N8N
+                </button>
+            </form>
+
+            <form method="post" action="send_minimal.php" class="mt-6">
+                <input type="hidden" name="order_id" value="<?= $order_id ?>">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                    Send Order to ServiceM8
+                </button>
+            </form>
         </div>
-
-        <!-- Buttons -->
-       
-        <!-- SEND EMAIL BUTTON -->
-<button type="button" 
-        id="openEmailModal"
-        data-order-id="<?= $order_id ?>"
-        data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-        data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
-        data-total="<?= number_format($grand_total, 2) ?>"
-        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
-    Send Order via Email
-</button>
-
-        <form method="post" action="send_order.php" class="mt-6">
-            <input type="hidden" name="order_id" value="<?= $order_id ?>">
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                Send Order to N8N
-            </button>
-        </form>
-
-        <form method="post" action="send_minimal.php" class="mt-6">
-            <input type="hidden" name="order_id" value="<?= $order_id ?>">
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                Send Order to ServiceM8
-            </button>
-        </form>
     </div>
 </div>
 
@@ -317,7 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const orderIdInput = document.getElementById('orderIdInput');
     const subjectField = document.getElementById('subjectField');
 
-    // Open modal
     openBtn.addEventListener('click', () => {
         emailInput.value = openBtn.getAttribute('data-customer-email') || '';
         customerNameInput.value = openBtn.getAttribute('data-customer-name') || '';
@@ -329,13 +309,11 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => modalContent.classList.add('opacity-100', 'scale-100'), 10);
     });
 
-    // Close modal
     closeBtn.addEventListener('click', () => {
         modalContent.classList.remove('opacity-100', 'scale-100');
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // Submit form
     document.getElementById('emailForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const payload = {
