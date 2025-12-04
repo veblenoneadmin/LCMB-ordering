@@ -123,16 +123,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 
-// --- Render form ---
-// (The tables HTML, right panel, CSS and JS remain exactly as your current version)
-ob_start();
-require __DIR__.'/create_order_form.php'; // assuming your tables and right panel HTML in a separate included file
-$content = ob_get_clean();
-renderLayout('Create Order',$content,'create_order');
-?>
-
- // end POST
-
 // Render form
 ob_start();
 ?>
