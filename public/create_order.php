@@ -382,7 +382,7 @@ document.addEventListener("DOMContentLoaded",function(){
   // --------------------------
   document.querySelectorAll(".personnel-date").forEach(input => {
       const pid = input.dataset.personnelId;
-      fetch('/path/to/get_personnel_booked_dates.php?personnel_id=' + pid)
+      fetch('/path/to/get_personnel_booked.php?personnel_id=' + pid)
         .then(res => res.json())
         .then(bookedDates => {
             flatpickr(input, {
