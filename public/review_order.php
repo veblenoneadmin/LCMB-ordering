@@ -56,11 +56,11 @@ foreach ($itemsRaw as $item) {
 
         case 'personnel':
             // Use technician_uuid instead of id if needed
-            $stmtName = $pdo->prepare("SELECT name, hourly_rate FROM personnel WHERE id=? OR technician_uuid=?");
+            $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
             $stmtName->execute([$item['item_id'], $item['item_id']]);
             $row = $stmtName->fetch(PDO::FETCH_ASSOC);
             $name = $row['name'] ?? 'Unknown Personnel';
-            $price = $row['hourly_rate'] ?? 0;
+            $price = $row['rate'] ?? 0;
             break;
 
         case 'equipment':
