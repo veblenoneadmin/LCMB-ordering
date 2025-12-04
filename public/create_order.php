@@ -226,6 +226,7 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 <td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
 <td class="p-2 text-center">
 <input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>" placeholder="YYYY-MM-DD" readonly>
+</td>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
 <button type="button" class="qtbn hour-minus">-</button>
@@ -268,14 +269,14 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    flex-wrap: wrap; /* keeps responsiveness */
+    flex-wrap: wrap;
 }
 
 .create-order-right {
     position: sticky;
     top: 24px;
-    width: 360px;       /* fixed width for right panel */
-    flex-shrink: 0;     /* prevent shrinking */
+    width: 360px;
+    flex-shrink: 0;
     align-self: flex-start;
 }
 
@@ -284,13 +285,14 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
         flex-direction: column;
     }
     .create-order-right {
-        width: 100%;    /* full width on mobile */
-        position: relative; /* remove sticky on small screens */
+        width: 100%;
+        position: relative;
     }
 }
 </style>
 
-<!-- JS for quantity, subtotal, summary, and disable booked dates -->
+<!-- JS for quantity, subtotal, summary, and Flatpickr personnel -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener("DOMContentLoaded",function(){
   function parseFloatSafe(v){return parseFloat(v)||0;}
@@ -362,52 +364,45 @@ document.addEventListener("DOMContentLoaded",function(){
       input.addEventListener('input',()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });
   });
 
-// Other Expenses
-document.getElementById("addExpenseBtn").addEventListener("click",function(){
-    const container=document.getElementById("otherExpensesContainer");
-    const div=document.createElement("div");
-    div.className="flex gap-2 mb-2";
-    div.innerHTML=`
-        <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
-        <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
-        <button type="button" class="qbtn remove-expense">Remove</button>
-    `;
-    container.appendChild(div);
+  // Other Expenses
+  document.getElementById("addExpenseBtn").addEventListener("click",function(){
+      const container=document.getElementById("otherExpensesContainer");
+      const div=document.createElement("div");
+      div.className="flex gap-2 mb-2";
+      div.innerHTML=`
+          <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
+          <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
+          <button type="button" class="qbtn remove-expense">Remove</button>
+      `;
+      container.appendChild(div);
 
-    div.querySelector(".remove-expense").addEventListener("click",function(){
-        div.remove();
-        updateSummary();
-    });
+      div.querySelector(".remove-expense").addEventListener("click",function(){
+          div.remove();
+          updateSummary();
+      });
 
-    div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
-});
+      div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
+  });
 
-// Update summary for other expenses input
-document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>inp.addEventListener("input", updateSummary));
+  document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>inp.addEventListener("input", updateSummary));
 
-// --------------------------
-// Disable booked dates in personnel
-// --------------------------
-document.addEventListener("DOMContentLoaded", function() {
+  // --------------------------
+  // Flatpickr for Personnel + Disable booked dates
+  // --------------------------
   let bookedDates = {};
-
-    // Fetch booked dates from server
-    fetch('/path/to/fetch_dispatch.php')
+  fetch('/fetch_dispatch.php')
     .then(res => res.json())
     .then(data => {
-        bookedDates = data; // { personnel_id: ["YYYY-MM-DD", ...] }
-
-        // Initialize flatpickr for each personnel
-        document.querySelectorAll(".personnel-date").forEach(input => {
+        bookedDates = data;
+        document.querySelectorAll(".personnel-date").forEach(input=>{
             const pid = input.dataset.personnelId;
-            const disableDates = bookedDates[pid] || [];
-
-            flatpickr(input, {
+            const disabledDates = bookedDates[pid] || [];
+            flatpickr(input,{
                 dateFormat: "Y-m-d",
-                disable: disableDates,
                 minDate: "today",
-                onChange: function(selectedDates, dateStr) {
-                    if (disableDates.includes(dateStr)) {
+                disable: disabledDates,
+                onChange: function(selectedDates, dateStr){
+                    if(disabledDates.includes(dateStr)){
                         alert("This date is already booked for this personnel.");
                         input.value = "";
                     }
@@ -416,8 +411,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-
-updateSummary();
+  updateSummary();
 });
 </script>
 
@@ -425,4 +419,3 @@ updateSummary();
 $content = ob_get_clean();
 renderLayout('Create Order', $content, 'create_order');
 ?>
-
