@@ -100,16 +100,21 @@ foreach ($_POST['ducted'] ?? [] as $did => $data) {
     $qty = intval($data['qty'] ?? 0);
     $type = $data['type'] ?? 'indoor';
     if ($qty > 0) {
-        $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT total_cost, model_name_indoor, model_name_outdoor FROM ductedinstallations WHERE id=? LIMIT 1");
         $stmt->execute([$did]);
-        $price = (float)$stmt->fetchColumn();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $price = (float)$row['total_cost'];
+
+        // select model based on type
+        $model_selected = ($type === 'outdoor') ? $row['model_name_outdoor'] : $row['model_name_indoor'];
+
         $items[] = [
             'item_type' => 'installation',
             'item_id' => $did,
-            'installation_type' => in_array($type, ['indoor','outdoor']) ? $type : 'indoor',
+            'installation_type' => $type, // 'indoor' or 'outdoor'
             'qty' => $qty,
             'price' => $price,
-            // remove 'model' => ...
+            // 'model' => $model_selected, // remove this line unless column exists
         ];
     }
 }
