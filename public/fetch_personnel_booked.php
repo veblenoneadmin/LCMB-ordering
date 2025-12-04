@@ -1,16 +1,23 @@
 <?php
-require_once __DIR__ . '/../config.php';
-header("Content-Type: application/json");
+// get_personnel_booked_dates.php
+require_once __DIR__ . '/../config.php'; // adjust path if needed
 
-// Fetch booked dates grouped by personnel
-$stmt = $pdo->query("
-    SELECT personnel_id, date
-    FROM dispatch
-");
-$data = [];
-while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
-    $pid = (int)$row['personnel_id'];
-    if(!isset($data[$pid])) $data[$pid] = [];
-    $data[$pid][] = $row['date'];
+header('Content-Type: application/json');
+
+$personnel_id = isset($_GET['personnel_id']) ? intval($_GET['personnel_id']) : 0;
+if($personnel_id <= 0){
+    echo json_encode([]);
+    exit;
 }
-echo json_encode($data);
+
+try {
+    // Fetch booked dates from dispatch table for this personnel
+    $stmt = $pdo->prepare("SELECT date FROM dispatch WHERE personnel_id = ? AND date >= CURDATE()");
+    $stmt->execute([$personnel_id]);
+    $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    echo json_encode($dates);
+} catch(Exception $e) {
+    // On error, just return empty array
+    echo json_encode([]);
+}
