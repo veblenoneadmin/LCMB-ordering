@@ -380,18 +380,29 @@ document.addEventListener("DOMContentLoaded",function(){
   // --------------------------
   // Flatpickr for personnel dates
   // --------------------------
-  document.querySelectorAll(".personnel-date").forEach(input => {
-      const pid = input.dataset.personnelId;
-      fetch('/path/to/get_personnel_booked.php?personnel_id=' + pid)
-        .then(res => res.json())
-        .then(bookedDates => {
-            flatpickr(input, {
-                dateFormat: "Y-m-d",
-                minDate: "today",
-                disable: bookedDates || []
-            });
-        });
-  });
+  document.querySelectorAll('.personnel-date').forEach(input => {
+    const pid = input.dataset.personnelId;
+
+    flatpickr(input, {
+        dateFormat: "Y-m-d",
+        allowInput: false,
+        minDate: "today",
+
+        onOpen: function(selectedDates, dateStr, instance) {
+
+            fetch('fetch_personnel_booked.php?personnel_id=' + pid)
+                .then(res => res.json())
+                .then(data => {
+
+                    console.log("PID:", pid, "Booked dates:", data);
+
+                    instance.set("disable", data);
+                })
+                .catch(err => console.error("Fetch error:", err));
+        }
+    });
+});
+
 
   updateSummary();
 });
