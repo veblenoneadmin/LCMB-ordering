@@ -18,7 +18,7 @@ $stmtItem = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
-// Organize items by type
+// Initialize grouped items
 $groupedItems = [
     'products'  => [],
     'split'     => [],
@@ -37,41 +37,42 @@ foreach ($itemsRaw as $item) {
 
     switch ($type) {
         case 'product':
-            $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Product';
-            $type = 'products'; // must match $groupedItems key
+            $stmt = $pdo->prepare("SELECT name FROM products WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Product';
+            $type = 'products';
             break;
 
         case 'installation':
             $installationType = $item['installation_type'] ?? '';
             if ($installationType === 'split') {
-                $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
+                $stmt = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
+                $stmt->execute([$item['item_id']]);
+                $name = $stmt->fetchColumn() ?: 'Unknown Split Installation';
                 $type = 'split';
-            } else { // ducted or other
-                $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
+            } else { // ducted
+                $stmt = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
+                $stmt->execute([$item['item_id']]);
+                $name = $stmt->fetchColumn() ?: 'Unknown Ducted Installation';
                 $name .= $installationType ? " ({$installationType})" : '';
                 $type = 'ducted';
             }
             break;
 
         case 'personnel':
-            $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-            $stmtName->execute([$item['item_id'], $item['item_id']]);
-            $row = $stmtName->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
+            $stmt->execute([$item['item_id'], $item['item_id']]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
             $name  = $row['name'] ?? 'Unknown Personnel';
             $price = isset($row['rate']) ? floatval($row['rate']) : 0;
             $type  = 'personnel';
             break;
 
         case 'equipment':
-            $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Equipment';
+            // Make sure 'equipment' table and 'id' column exist
+            $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Equipment';
             $type = 'equipment';
             break;
 
@@ -82,9 +83,8 @@ foreach ($itemsRaw as $item) {
             break;
     }
 
-    // Ensure cost exists
     if ($cost === null || $cost == 0) {
-        $cost = $price * 0.70; // fallback cost
+        $cost = $price * 0.70;
     }
 
     $normalized = [
@@ -94,12 +94,13 @@ foreach ($itemsRaw as $item) {
         'cost'  => $cost
     ] + $item;
 
-    // Add to groupedItems safely
+    // Add to groupedItems
     if (!isset($groupedItems[$type])) {
         $type = 'expense';
     }
     $groupedItems[$type][] = $normalized;
 }
+
 
 
 // ==========================
