@@ -55,13 +55,14 @@ foreach ($itemsRaw as $item) {
             break;
 
         case 'personnel':
-            // Use technician_uuid instead of id if needed
-            $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-            $stmtName->execute([$item['item_id'], $item['item_id']]);
-            $row = $stmtName->fetch(PDO::FETCH_ASSOC);
-            $name = $row['name'] ?? 'Unknown Personnel';
-            $price = $row['rate'] ?? 0;
-            break;
+                $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
+                $stmtName->execute([$item['item_id'], $item['item_id']]);
+                $row = $stmtName->fetch(PDO::FETCH_ASSOC);
+
+                $name = $row['name'] ?? 'Unknown Personnel';
+                $price = $row['rate'] ?? 0; // use rate, not hourly_rate
+        break;
+
 
         case 'equipment':
             $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
