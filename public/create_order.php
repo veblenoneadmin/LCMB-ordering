@@ -225,7 +225,12 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 <td class="p-2 text-left"><?= htmlspecialchars($p['name']) ?></td>
 <td class="p-2 text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
 <td class="p-2 text-center">
-<input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" data-personnel-id="<?= $pid ?>" placeholder="YYYY-MM-DD" readonly>
+<input type="text" 
+       name="personnel_date[<?= $pid ?>]" 
+       class="personnel-date w-full text-center" 
+       data-personnel-id="<?= $pid ?>" 
+       placeholder="YYYY-MM-DD">
+
 </td>
 <td class="p-2 text-center">
 <div class="qty-wrapper">
@@ -290,6 +295,8 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
     }
 }
 </style>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+<script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
 
 <!-- JS for quantity, subtotal, summary, and Flatpickr personnel -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -387,25 +394,33 @@ document.addEventListener("DOMContentLoaded",function(){
   document.querySelectorAll('input[name="other_expense_amount[]"]').forEach(inp=>inp.addEventListener("input", updateSummary));
 
   // --------------------------
-  // Initialize Flatpickr and disable booked dates
-// Initialize Flatpickr for personnel dates
-fetch('/fetch_personnel_booked.php')
+ // --------------------------
+// Personnel date picker using Pikaday
+// --------------------------
+fetch('fetch_personnel_booked.php')
   .then(res => res.json())
   .then(bookedDates => {
       document.querySelectorAll(".personnel-date").forEach(input => {
           const pid = input.dataset.personnelId;
-          const disabledDates = bookedDates[pid] || [];
+          const disabled = bookedDates[pid] || [];
 
-          flatpickr(input, {
-              dateFormat: "Y-m-d",
-              minDate: "today",
-              disable: disabledDates,
-              allowInput: false, // optional: prevent manual typing
-              onChange: function(selectedDates, dateStr){
-                  if(disabledDates.includes(dateStr)){
+          new Pikaday({
+              field: input,
+              format: 'YYYY-MM-DD',
+              minDate: new Date(),
+              onSelect: function(date) {
+                  const dStr = this.getMoment().format('YYYY-MM-DD');
+                  if(disabled.includes(dStr)){
                       alert("This date is already booked for this personnel.");
-                      input.value = "";
+                      input.value = '';
                   }
+              },
+              toString(date) {
+                  return moment(date).format('YYYY-MM-DD');
+              },
+              isDisabled(date) {
+                  const dStr = moment(date).format('YYYY-MM-DD');
+                  return disabled.includes(dStr);
               }
           });
       });
