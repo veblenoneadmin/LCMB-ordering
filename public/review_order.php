@@ -39,15 +39,23 @@ $categoryMap = [
 ];
 
 foreach ($itemsRaw as $item) {
+
+    // FIX: ensure category always exists so no warnings happen
+    if (!isset($item['category']) || $item['category'] === '') {
+        $item['category'] = 'other expense';
+    }
+
+    $cat = strtolower(trim($item['category']));
+
     $name  = '';
     $price = isset($item['price']) ? floatval($item['price']) : 0;
     $qty   = isset($item['qty']) ? intval($item['qty']) : 1;
     $cost  = isset($item['cost']) ? floatval($item['cost']) : null;
 
-    // Determine group based on category
-    $type = $categoryMap[$item['category']] ?? 'expense';
+    // Determine group correctly
+    $type = $categoryMap[$cat] ?? 'expense';
 
-    switch ($item['category']) {
+    switch ($cat) {
         case 'product':
             $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
             $stmtName->execute([$item['item_id']]);
@@ -80,13 +88,11 @@ foreach ($itemsRaw as $item) {
             $name = $stmtName->fetchColumn() ?: 'Unknown Equipment';
             break;
 
-        case 'other expense':
         default:
             $name = $item['name'] ?? 'Other Expense';
             break;
     }
 
-    // Ensure cost always exists
     if ($cost === null || $cost == 0) {
         $cost = $price * 0.70;
     }
