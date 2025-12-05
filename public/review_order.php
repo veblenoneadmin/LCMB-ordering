@@ -163,27 +163,36 @@ ob_start();
     ?>
   </div>
 
-    <!-- SUMMARY PANEL -->
-    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6">
-        <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
-            <h3 class="text-base font-semibold text-gray-700 mb-2">Profit Summary</h3>
-            <div class="flex justify-between text-gray-600 mb-1">
-                <span>Profit:</span>
-                <span>$<?= number_format($profit, 2) ?></span>
-            </div>
-            <div class="flex justify-between text-gray-600 mb-1">
-                <span>Percent Margin:</span>
-                <span><?= number_format($percent_margin, 2) ?>%</span>
-            </div>
-            <div class="flex justify-between text-gray-600 mb-1">
-                <span>Net Profit:</span>
-                <span><?= number_format($net_profit, 2) ?>%</span>
-            </div>
-            <div class="flex justify-between font-semibold text-gray-700">
-                <span>Total Profit:</span>
-                <span>$<?= number_format($total_profit, 2) ?></span>
-            </div>
+    <!-- Right PANEL -->
 
+    <!-- PROFIT CARD -->
+<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6 mb-4">
+    <div id="profitCard" class="bg-white p-4 rounded-xl shadow border border-gray-200">
+        <h3 class="text-base font-semibold text-gray-700 mb-3">Profit Summary</h3>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Profit:</span>
+            <span>$<?= number_format($profit, 2) ?></span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Percent Margin:</span>
+            <span><?= number_format($percent_margin, 2) ?>%</span>
+        </div>
+
+        <div class="flex justify-between text-gray-600 mb-1">
+            <span>Net Profit:</span>
+            <span><?= number_format($net_profit, 2) ?></span>
+        </div>
+
+        <div class="flex justify-between font-semibold text-gray-700 mt-2">
+            <span>Total Profit:</span>
+            <span>$<?= number_format($total_profit, 2) ?></span>
+        </div>
+    </div>
+</div>
+
+    <!-- Summary Card -->
             <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col mt-4">
                 <div class="flex justify-between text-gray-700">
                     <span>Subtotal</span>
