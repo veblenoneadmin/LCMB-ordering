@@ -192,54 +192,30 @@ ob_start();
     </div>
 </div>
 
-    <!-- SUMMARY CARD -->
-<div id="rightPanel" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 h-fit sticky top-6">
-    <h3 class="text-base font-semibold text-gray-700 mb-3">Order Summary</h3>
+ <!-- PROFIT CARD -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200 w-full">
+    <h3 class="text-lg font-semibold text-gray-700 mb-4">Profit</h3>
 
-    <div class="flex justify-between text-gray-700 mb-1">
-        <span>Subtotal</span>
-        <span>$<?= number_format($subtotal, 2) ?></span>
-    </div>
+    <div class="space-y-3">
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Total Items Cost</span>
+            <span class="font-medium text-gray-900">₱<?= number_format($total_items_cost, 2) ?></span>
+        </div>
 
-    <div class="flex justify-between text-gray-700 mb-1">
-        <span>Tax (10%)</span>
-        <span>$<?= number_format($tax, 2) ?></span>
-    </div>
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Technician Cost</span>
+            <span class="font-medium text-gray-900">₱<?= number_format($total_technician_cost, 2) ?></span>
+        </div>
 
-    <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3 mt-3">
-        <span>Grand Total</span>
-        <span>$<?= number_format($grand_total, 2) ?></span>
-    </div>
-    <!-- Buttons -->
-                <button type="button" 
-                        id="openEmailModal"
-                        data-order-id="<?= $order_id ?>"
-                        data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-                        data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
-                        data-total="<?= number_format($grand_total, 2) ?>"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
-                    Send Order via Email
-                </button>
+        <div class="border-t my-2"></div>
 
-                <form method="post" action="send_order.php" class="mt-6">
-                    <input type="hidden" name="order_id" value="<?= $order_id ?>">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                        Send Order to N8N
-                    </button>
-                </form>
-
-                <form method="post" action="send_minimal.php" class="mt-6">
-                    <input type="hidden" name="order_id" value="<?= $order_id ?>">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                        Send Order to ServiceM8
-                    </button>
-                </form>
-</div>
-           
-            </div>
+        <div class="flex justify-between text-base font-semibold">
+            <span class="text-gray-700">Profit</span>
+            <span class="text-green-600">₱<?= number_format($profit, 2) ?></span>
         </div>
     </div>
 </div>
+
 
 <!-- EMAIL MODAL -->
 <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity duration-300">
