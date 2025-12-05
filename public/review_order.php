@@ -192,22 +192,25 @@ ob_start();
     </div>
 </div>
 
-    <!-- Summary Card -->
-            <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col mt-4">
-                <div class="flex justify-between text-gray-700">
-                    <span>Subtotal</span>
-                    <span><?= number_format($subtotal, 2) ?></span>
-                </div>
-                <div class="flex justify-between text-gray-700">
-                    <span>Tax (10%)</span>
-                    <span><?= number_format($tax, 2) ?></span>
-                </div>
-                <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
-                    <span>Grand Total</span>
-                    <span><?= number_format($grand_total, 2) ?></span>
-                </div>
+    <!-- SUMMARY CARD -->
+<div id="rightPanel" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 h-fit sticky top-6">
+    <h3 class="text-base font-semibold text-gray-700 mb-3">Order Summary</h3>
 
-                <!-- Buttons -->
+    <div class="flex justify-between text-gray-700 mb-1">
+        <span>Subtotal</span>
+        <span>$<?= number_format($subtotal, 2) ?></span>
+    </div>
+
+    <div class="flex justify-between text-gray-700 mb-1">
+        <span>Tax (10%)</span>
+        <span>$<?= number_format($tax, 2) ?></span>
+    </div>
+
+    <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3 mt-3">
+        <span>Grand Total</span>
+        <span>$<?= number_format($grand_total, 2) ?></span>
+    </div>
+    <!-- Buttons -->
                 <button type="button" 
                         id="openEmailModal"
                         data-order-id="<?= $order_id ?>"
@@ -231,6 +234,8 @@ ob_start();
                         Send Order to ServiceM8
                     </button>
                 </form>
+</div>
+           
             </div>
         </div>
     </div>
