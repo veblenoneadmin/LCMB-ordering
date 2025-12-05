@@ -52,22 +52,26 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 
     // DUCTED INSTALLATION
-    foreach($_POST['ducted'] ?? [] as $did=>$data){
-        $qty = intval($data['qty']??0);
-        $type = $data['type'] ?? 'indoor';
-        if($qty>0){
-            $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
-            $stmt->execute([$did]);
-            $price = (float)$stmt->fetchColumn();
-            $items[] = [
-                'item_id'=>$did,
-                'item_category'=>'ducted',
-                'installation_type'=>in_array($type,['indoor','outdoor'])?$type:'indoor',
-                'qty'=>$qty,
-                'price'=>$price
-            ];
-        }
+foreach($_POST['ducted'] ?? [] as $did => $data){
+    $qty = intval($data['qty'] ?? 0);
+    $type = $data['type'] ?? 'indoor'; // default to indoor if missing
+    if($qty > 0){
+        // Make sure the value is only 'indoor' or 'outdoor'
+        $type = in_array($type, ['indoor','outdoor']) ? $type : 'indoor';
+
+        $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
+        $stmt->execute([$did]);
+        $price = (float)$stmt->fetchColumn();
+
+        $items[] = [
+            'item_id' => $did,
+            'item_category' => 'ducted',
+            'installation_type' => $type,
+            'qty' => $qty,
+            'price' => $price
+        ];
     }
+}
 
     // EQUIPMENT
     foreach($_POST['equipment'] ?? [] as $eid => $qty){
@@ -214,9 +218,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 </div>
 
 <!-- PRODUCTS TABLE -->
-<?php
-function render_table($items,$input_name_prefix,$qty_class='qty-input',$price_field='price'){
-?>
+
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
 <div class="flex items-center justify-between mb-3">
 <span class="font-medium text-gray-700"><?= $items[0]['category'] ?? 'Items' ?></span>
@@ -244,13 +246,81 @@ function render_table($items,$input_name_prefix,$qty_class='qty-input',$price_fi
 </table>
 </div>
 </div>
-<?php
-}
-render_table($products,'product');
-render_table($split_installations,'split','qty-input split-qty','price');
-render_table($ducted_installations,'ducted','qty-input ducted-qty','price');
-render_table($equipment,'equipment','qty-input equip-input','rate');
-?>
+
+<!-- Ducted TABLE -->
+
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Ducted Installations</span>
+    <input type="text" class="search-input" placeholder="Search..." >
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th>Name</th>
+          <th class="text-center">Price</th>
+          <th class="text-center">Qty</th>
+          <th class="text-center">Type</th>
+          <th class="text-center">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach($ducted_installations as $d): ?>
+        <tr>
+          <td><?= htmlspecialchars($d['name']) ?></td>
+          <td class="text-center"><?= number_format($d['price'],2) ?></td>
+          <td class="text-center"><input type="number" min="0" value="0" name="ducted[<?= $d['id'] ?>][qty]" class="qty-input" data-price="<?= $d['price'] ?>"></td>
+          <td class="text-center">
+            <select name="ducted[<?= $d['id'] ?>][type]">
+              <option value="indoor">Indoor</option>
+              <option value="outdoor">Outdoor</option>
+            </select>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SPLIT INSTALLATIONS TABLE -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Split Installations</span>
+    <input type="text" class="search-input" placeholder="Search..." >
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th>Name</th>
+          <th class="text-center">Price</th>
+          <th class="text-center">Qty</th>
+          <th class="text-center">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach($split_installations as $s): ?>
+        <tr>
+          <td><?= htmlspecialchars($s['name']) ?></td>
+          <td class="text-center"><?= number_format($s['price'],2) ?></td>
+          <td class="text-center">
+            <div class="qty-wrapper">
+              <button type="button" class="qtbn minus">-</button>
+              <input type="number" min="0" value="0" name="split[<?= $s['id'] ?>]" class="qty-input split-qty" data-price="<?= $s['price'] ?>">
+              <button type="button" class="qtbn plus">+</button>
+            </div>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 
 <!-- PERSONNEL -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
