@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
-        header("Location: index.php");
+        header("Location: dashboard.php");
         exit;
     } else {
         $message = "Invalid username or password.";
@@ -24,17 +24,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <title>Login - Material Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #3f51b5, #2196f3);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            background: #fff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            width: 350px;
+            text-align: center;
+        }
+
+        .card h2 {
+            margin-bottom: 30px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .card input[type="text"],
+        .card input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0 20px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .card input:focus {
+            border-color: #3f51b5;
+            box-shadow: 0 0 5px rgba(63,81,181,0.5);
+            outline: none;
+        }
+
+        .card button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #3f51b5;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .card button:hover {
+            background-color: #303f9f;
+        }
+
+        .card p {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .card p a {
+            color: #3f51b5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .error-message {
+            color: #e53935;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-<h2>Login</h2>
-<form id="loginForm" method="POST">
-    <input type="text" name="username" placeholder="Username" required><br><br>
-    <input type="password" name="password" placeholder="Password" required><br><br>
-    <button type="submit">Login</button>
-</form>
-<p style="color:red;"><?= $message ?></p>
-<p>No account? <a href="register.php">Register here</a></p>
+<div class="card">
+    <h2>Login</h2>
+    <?php if($message): ?>
+        <div class="error-message"><?= htmlspecialchars($message) ?></div>
+    <?php endif; ?>
+    <form id="loginForm" method="POST">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+    <p>No account? <a href="register.php">Register here</a></p>
+</div>
 
 <script>
 document.getElementById('loginForm').addEventListener('submit', function(e){
