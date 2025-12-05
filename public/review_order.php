@@ -19,7 +19,7 @@ $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================
-// GROUP ITEMS
+// GROUP ITEMS (UPDATED)
 // ==========================
 $groupedItems = [
     'product'    => [],
@@ -30,51 +30,67 @@ $groupedItems = [
     'expense'    => []
 ];
 
-// Map DB item type or category to group key
+// Clean map for matching
 $typeMap = [
-    'product'             => 'product',
-    'split installation'  => 'split',
+    'product' => 'product',
+    'split'   => 'split',
+    'split installation' => 'split',
+    'ducted'  => 'ducted',
     'ducted installation' => 'ducted',
-    'personnel'           => 'personnel',
-    'equipment'           => 'equipment',
-    'other expense'       => 'expense'
+    'personnel' => 'personnel',
+    'equipment' => 'equipment',
+    'other expense' => 'expense',
+    'expense' => 'expense'
 ];
 
 foreach ($itemsRaw as $item) {
-    $typeKey = $typeMap[strtolower(trim($item['item_type'] ?? $item['category'] ?? 'other expense'))] ?? 'expense';
 
-    // Fetch display name based on type
+    // Determine category using item_type first
+    $rawType = strtolower(trim($item['item_type'] ?? ''));
+
+    // If item_type empty, fallback to category column (some tables use "category")
+    if ($rawType === '' && isset($item['category'])) {
+        $rawType = strtolower(trim($item['category']));
+    }
+
+    // Map to correct group
+    $typeKey = $typeMap[$rawType] ?? 'expense';
+
+    // ==========================
+    // FETCH NAME BASED ON TYPE
+    // ==========================
     switch ($typeKey) {
+
         case 'product':
-            $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Product';
+            $stmt = $pdo->prepare("SELECT name FROM products WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Product';
             break;
 
         case 'split':
-            $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
+            $stmt = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Split Installation';
             break;
 
         case 'ducted':
-            $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
+            $stmt = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Ducted Installation';
             break;
 
         case 'personnel':
-            $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-            $stmtName->execute([$item['item_id'], $item['item_id']]);
-            $row = $stmtName->fetch(PDO::FETCH_ASSOC);
-            $name  = $row['name'] ?? 'Unknown Personnel';
-            $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
+            $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
+            $stmt->execute([$item['item_id'], $item['item_id']]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $name = $row['name'] ?? 'Unknown Personnel';
+            $item['price'] = $row['rate'] ?? $item['price'] ?? 0;
             break;
 
         case 'equipment':
-            $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-            $stmtName->execute([$item['item_id']]);
-            $name = $stmtName->fetchColumn() ?: 'Unknown Equipment';
+            $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+            $stmt->execute([$item['item_id']]);
+            $name = $stmt->fetchColumn() ?: 'Unknown Equipment';
             break;
 
         default:
@@ -82,15 +98,20 @@ foreach ($itemsRaw as $item) {
             break;
     }
 
+    // ==========================
+    // FINAL ITEM CLEANUP
+    // ==========================
     $item['name'] = $name;
     $item['qty']  = $item['qty'] ?? 1;
     $item['price']= $item['price'] ?? 0;
 
-    // Calculate default cost if not set
+    // default cost calculation
     $item['cost'] = $item['cost'] ?? ($item['price'] * 0.70);
 
+    // add to group
     $groupedItems[$typeKey][] = $item;
 }
+
 
 // ==========================
 // CALCULATE TOTALS
