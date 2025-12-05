@@ -19,78 +19,73 @@ $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================
-// GROUP ITEMS (UPDATED)
+// CATEGORY DETECTION FUNCTION
 // ==========================
-$groupedItems = [
-    'product'    => [],
-    'split'      => [],
-    'ducted'     => [],
-    'personnel'  => [],
-    'equipment'  => [],
-    'expense'    => []
-];
+function getCategory(PDO $pdo, string $itemType, int $itemId): string
+{
+    $tables = [
+        'product'   => ['table' => 'products',  'column' => 'category'],
+        'split installation' => ['table' => 'split_installation', 'column' => 'category'],
+        'ducted installation'=> ['table' => 'ductedinstallations', 'column' => 'category'],
+        'personnel' => ['table' => 'personnel', 'column' => 'category'],
+        'equipment' => ['table' => 'equipment', 'column' => 'category']
+    ];
 
-// Clean map for matching
-$typeMap = [
-    'product' => 'product',
-    'split'   => 'split',
-    'split installation' => 'split',
-    'ducted'  => 'ducted',
-    'ducted installation' => 'ducted',
-    'personnel' => 'personnel',
-    'equipment' => 'equipment',
-    'other expense' => 'expense',
-    'expense' => 'expense'
-];
-
-foreach ($itemsRaw as $item) {
-
-    // Determine category using item_type first
-    $rawType = strtolower(trim($item['item_type'] ?? ''));
-
-    // If item_type empty, fallback to category column (some tables use "category")
-    if ($rawType === '' && isset($item['category'])) {
-        $rawType = strtolower(trim($item['category']));
+    if (!isset($tables[$itemType])) {
+        return 'Other Expenses';
     }
 
-    // Map to correct group
-    $typeKey = $typeMap[$rawType] ?? 'expense';
+    $tbl = $tables[$itemType]['table'];
+    $col = $tables[$itemType]['column'];
 
-    // ==========================
-    // FETCH NAME BASED ON TYPE
-    // ==========================
-    switch ($typeKey) {
+    $stmt = $pdo->prepare("SELECT $col FROM $tbl WHERE id = ?");
+    $stmt->execute([$itemId]);
+    $category = $stmt->fetchColumn();
 
+    return $category ?: 'Other Expenses';
+}
+
+// ==========================
+// GROUP ITEMS
+// ==========================
+$groupedItems = [];
+
+foreach ($itemsRaw as $item) {
+    $itemType = strtolower(trim($item['item_type'] ?? ''));
+    $category = getCategory($pdo, $itemType, $item['item_id']);
+
+    // Fetch display name based on type
+    switch ($itemType) {
         case 'product':
-            $stmt = $pdo->prepare("SELECT name FROM products WHERE id=?");
-            $stmt->execute([$item['item_id']]);
-            $name = $stmt->fetchColumn() ?: 'Unknown Product';
+            $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?: 'Unknown Product';
             break;
 
-        case 'split':
-            $stmt = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
-            $stmt->execute([$item['item_id']]);
-            $name = $stmt->fetchColumn() ?: 'Unknown Split Installation';
+        case 'split installation':
+            $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
             break;
 
-        case 'ducted':
-            $stmt = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
-            $stmt->execute([$item['item_id']]);
-            $name = $stmt->fetchColumn() ?: 'Unknown Ducted Installation';
+        case 'ducted installation':
+            $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
             break;
 
         case 'personnel':
-            $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-            $stmt->execute([$item['item_id'], $item['item_id']]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $name = $row['name'] ?? 'Unknown Personnel';
-            $item['price'] = $row['rate'] ?? $item['price'] ?? 0;
+            $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
+            $stmtName->execute([$item['item_id'], $item['item_id']]);
+            $row = $stmtName->fetch(PDO::FETCH_ASSOC);
+            $name  = $row['name'] ?? 'Unknown Personnel';
+            $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
             break;
 
         case 'equipment':
-            $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-            $stmt->execute([$item['item_id']]);
-            $name = $stmt->fetchColumn() ?: 'Unknown Equipment';
+            $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+            $stmtName->execute([$item['item_id']]);
+            $name = $stmtName->fetchColumn() ?: 'Unknown Equipment';
             break;
 
         default:
@@ -98,20 +93,13 @@ foreach ($itemsRaw as $item) {
             break;
     }
 
-    // ==========================
-    // FINAL ITEM CLEANUP
-    // ==========================
     $item['name'] = $name;
     $item['qty']  = $item['qty'] ?? 1;
     $item['price']= $item['price'] ?? 0;
-
-    // default cost calculation
     $item['cost'] = $item['cost'] ?? ($item['price'] * 0.70);
 
-    // add to group
-    $groupedItems[$typeKey][] = $item;
+    $groupedItems[$category][] = $item;
 }
-
 
 // ==========================
 // CALCULATE TOTALS
@@ -119,7 +107,7 @@ foreach ($itemsRaw as $item) {
 $subtotal = 0;
 $total_cost = 0;
 
-foreach ($groupedItems as $type => $items) {
+foreach ($groupedItems as $items) {
     foreach ($items as $item) {
         $subtotal   += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
         $total_cost += ($item['cost'] ?? 0) * ($item['qty'] ?? 1);
@@ -168,46 +156,34 @@ ob_start();
         </div>
 
         <!-- GROUPED ITEMS -->
-        <?php
-        $titles = [
-            'product'   => 'Ordered Products',
-            'split'     => 'Split Installations',
-            'ducted'    => 'Ducted Installations',
-            'personnel' => 'Personnel',
-            'equipment' => 'Equipment',
-            'expense'   => 'Other Expenses'
-        ];
-        ?>
-        <?php foreach ($titles as $key => $title): ?>
-            <?php if (!empty($groupedItems[$key])): ?>
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-                    <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= $title ?></h3>
-                    <div class="overflow-auto rounded-xl border border-gray-200">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100 text-gray-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left">Item</th>
-                                    <th class="px-4 py-3 text-center">Price</th>
-                                    <th class="px-4 py-3 text-center">Quantity/Hours</th>
-                                    <th class="px-4 py-3 text-right">Subtotal</th>
+        <?php foreach ($groupedItems as $category => $items): ?>
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <h3 class="text-lg font-semibold mb-4 text-gray-700"><?= htmlspecialchars($category) ?></h3>
+                <div class="overflow-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 text-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Item</th>
+                                <th class="px-4 py-3 text-center">Price</th>
+                                <th class="px-4 py-3 text-center">Quantity/Hours</th>
+                                <th class="px-4 py-3 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($items as $item):
+                                $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
+                            ?>
+                                <tr class="border-t hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
+                                    <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
+                                    <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
+                                    <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($groupedItems[$key] as $item):
-                                    $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
-                                ?>
-                                    <tr class="border-t hover:bg-gray-50">
-                                        <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
-                                        <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
-                                        <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
-                                        <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-            <?php endif; ?>
+            </div>
         <?php endforeach; ?>
     </div>
 
@@ -231,46 +207,46 @@ ob_start();
                 <span>Total Profit:</span>
                 <span>$<?= number_format($total_profit, 2) ?></span>
             </div>
-        </div>
 
-        <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col">
-            <div class="flex justify-between text-gray-700">
-                <span>Subtotal</span>
-                <span><?= number_format($subtotal, 2) ?></span>
-            </div>
-            <div class="flex justify-between text-gray-700">
-                <span>Tax (10%)</span>
-                <span><?= number_format($tax, 2) ?></span>
-            </div>
-            <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
-                <span>Grand Total</span>
-                <span><?= number_format($grand_total, 2) ?></span>
-            </div>
+            <div id="rightPanel" class="bg-white p-6 rounded-2xl shadow border border-gray-200 h-auto max-h-[80vh] flex flex-col mt-4">
+                <div class="flex justify-between text-gray-700">
+                    <span>Subtotal</span>
+                    <span><?= number_format($subtotal, 2) ?></span>
+                </div>
+                <div class="flex justify-between text-gray-700">
+                    <span>Tax (10%)</span>
+                    <span><?= number_format($tax, 2) ?></span>
+                </div>
+                <div class="flex justify-between font-semibold text-gray-900 text-base border-t pt-3">
+                    <span>Grand Total</span>
+                    <span><?= number_format($grand_total, 2) ?></span>
+                </div>
 
-            <!-- Buttons -->
-            <button type="button" 
-                    id="openEmailModal"
-                    data-order-id="<?= $order_id ?>"
-                    data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-                    data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
-                    data-total="<?= number_format($grand_total, 2) ?>"
-                    class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
-                Send Order via Email
-            </button>
-
-            <form method="post" action="send_order.php" class="mt-6">
-                <input type="hidden" name="order_id" value="<?= $order_id ?>">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                    Send Order to N8N
+                <!-- Buttons -->
+                <button type="button" 
+                        id="openEmailModal"
+                        data-order-id="<?= $order_id ?>"
+                        data-customer-email="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
+                        data-customer-name="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
+                        data-total="<?= number_format($grand_total, 2) ?>"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition shadow mt-4">
+                    Send Order via Email
                 </button>
-            </form>
 
-            <form method="post" action="send_minimal.php" class="mt-6">
-                <input type="hidden" name="order_id" value="<?= $order_id ?>">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
-                    Send Order to ServiceM8
-                </button>
-            </form>
+                <form method="post" action="send_order.php" class="mt-6">
+                    <input type="hidden" name="order_id" value="<?= $order_id ?>">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                        Send Order to N8N
+                    </button>
+                </form>
+
+                <form method="post" action="send_minimal.php" class="mt-6">
+                    <input type="hidden" name="order_id" value="<?= $order_id ?>">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition shadow">
+                        Send Order to ServiceM8
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
