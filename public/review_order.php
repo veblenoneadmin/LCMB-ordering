@@ -163,38 +163,7 @@ ob_start();
     ?>
   </div>
 
-    <!-- Right PANEL -->
-
- <!-- PROFIT CARD -->
-<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6 mb-4">
-    <h3 class="text-base font-semibold text-gray-700 mb-3">Profit Summary</h3>
-
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Profit:</span>
-        <span>$<?= number_format($profit, 2) ?></span>
-    </div>
-
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Percent Margin:</span>
-        <span><?= number_format($percent_margin, 2) ?>%</span>
-    </div>
-
-    <div class="flex justify-between text-gray-600 mb-1">
-        <span>Net Profit:</span>
-        <span>$<?= number_format($net_profit, 2) ?></span>
-    </div>
-
-    <div class="border-t my-2"></div>
-
-    <div class="flex justify-between font-semibold text-gray-700">
-        <span>Total Profit:</span>
-        <span>$<?= number_format($total_profit, 2) ?></span>
-    </div>
-</div>
-
-
-
-    <!-- SUMMARY CARD -->
+<!-- SUMMARY CARD -->
 <div class="create-order-grid">
     <!-- LEFT PANEL: Items -->
     <div class="flex-1 flex flex-col gap-6">
