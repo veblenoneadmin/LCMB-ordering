@@ -19,7 +19,7 @@ $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================
-// GROUP ITEMS
+// GROUP ITEMS AUTOMATICALLY BASED ON TABLE CATEGORY
 // ==========================
 $groupedItems = [
     'product'    => [],
@@ -32,97 +32,26 @@ $groupedItems = [
 
 foreach ($itemsRaw as $item) {
 
-    // AUTO DETECT CATEGORY
-    $category = strtolower(trim($item['category'] ?? ''));
+    $name = 'Unknown Item';
+    $category = 'expense'; // default if table lookup fails
 
-    // If category is empty, fetch from table based on item_type
-    if (!$category) {
-        switch (strtolower($item['item_type'] ?? '')) {
-            case 'product':
-                $stmtCat = $pdo->prepare("SELECT category, name FROM products WHERE id=?");
-                $stmtCat->execute([$item['item_id']]);
-                $row = $stmtCat->fetch(PDO::FETCH_ASSOC);
-                $category = strtolower($row['category'] ?? 'product');
-                $name     = $row['name'] ?? 'Unknown Product';
-                break;
-
-            case 'split installation':
-                $stmtCat = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?");
-                $stmtCat->execute([$item['item_id']]);
-                $row = $stmtCat->fetch(PDO::FETCH_ASSOC);
-                $category = strtolower($row['category'] ?? 'split');
-                $name     = $row['item_name'] ?? 'Unknown Split Installation';
-                break;
-
-            case 'ducted installation':
-                $stmtCat = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?");
-                $stmtCat->execute([$item['item_id']]);
-                $row = $stmtCat->fetch(PDO::FETCH_ASSOC);
-                $category = strtolower($row['category'] ?? 'ducted');
-                $name     = $row['equipment_name'] ?? 'Unknown Ducted Installation';
-                break;
-
-            case 'personnel':
-                $stmtCat = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-                $stmtCat->execute([$item['item_id'], $item['item_id']]);
-                $row = $stmtCat->fetch(PDO::FETCH_ASSOC);
-                $category = 'personnel';
-                $name     = $row['name'] ?? 'Unknown Personnel';
-                $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
-                break;
-
-            case 'equipment':
-                $stmtCat = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-                $stmtCat->execute([$item['item_id']]);
-                $row = $stmtCat->fetch(PDO::FETCH_ASSOC);
-                $category = 'equipment';
-                $name     = $row['item'] ?? 'Unknown Equipment';
-                break;
-
-            default:
-                $category = 'expense';
-                $name = $item['name'] ?? 'Other Expense';
-                break;
-        }
-    } else {
-        // If category exists in order_items, fetch name from corresponding table
-        switch ($category) {
-            case 'product':
-                $stmtName = $pdo->prepare("SELECT name FROM products WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Product';
-                break;
-
-            case 'split':
-                $stmtName = $pdo->prepare("SELECT item_name FROM split_installation WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Split Installation';
-                break;
-
-            case 'ducted':
-                $stmtName = $pdo->prepare("SELECT equipment_name FROM ductedinstallations WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Ducted Installation';
-                break;
-
-            case 'personnel':
-                $stmtName = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-                $stmtName->execute([$item['item_id'], $item['item_id']]);
-                $row = $stmtName->fetch(PDO::FETCH_ASSOC);
-                $name  = $row['name'] ?? 'Unknown Personnel';
-                $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
-                break;
-
-            case 'equipment':
-                $stmtName = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-                $stmtName->execute([$item['item_id']]);
-                $name = $stmtName->fetchColumn() ?: 'Unknown Equipment';
-                break;
-
-            default:
-                $name = $item['name'] ?? 'Other Expense';
-                break;
-        }
+    // Check each table
+    if ($row = $pdo->prepare("SELECT category, name FROM products WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+        $category = strtolower($row['category'] ?? 'product');
+        $name     = $row['name'] ?? 'Unknown Product';
+    } elseif ($row = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+        $category = strtolower($row['category'] ?? 'split');
+        $name     = $row['item_name'] ?? 'Unknown Split Installation';
+    } elseif ($row = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+        $category = strtolower($row['category'] ?? 'ducted');
+        $name     = $row['equipment_name'] ?? 'Unknown Ducted Installation';
+    } elseif ($row = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?")->execute([$item['item_id'], $item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+        $category = 'personnel';
+        $name     = $row['name'] ?? 'Unknown Personnel';
+        $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
+    } elseif ($row = $pdo->prepare("SELECT item FROM equipment WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+        $category = 'equipment';
+        $name     = $row['item'] ?? 'Unknown Equipment';
     }
 
     $item['name'] = $name;
@@ -146,7 +75,7 @@ foreach ($itemsRaw as $item) {
 // ==========================
 $subtotal = 0;
 $total_cost = 0;
-foreach ($groupedItems as $type => $items) {
+foreach ($groupedItems as $items) {
     foreach ($items as $item) {
         $subtotal   += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
         $total_cost += ($item['cost'] ?? 0) * ($item['qty'] ?? 1);
@@ -165,15 +94,12 @@ ob_start();
 
 <!-- HTML CONTENT -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- LEFT SECTION -->
     <div class="lg:col-span-2 space-y-6">
-        <!-- ORDER HEADER -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
             <p class="text-gray-500 text-sm mt-1">Verify all order details before sending to ServiceM8.</p>
         </div>
 
-        <!-- CLIENT INFORMATION -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Client Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
