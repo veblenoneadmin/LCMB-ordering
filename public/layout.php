@@ -22,12 +22,12 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 
     <style>
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
-        .sidebar-link { display:flex; align-items:center; padding-top:5px; gap:12px; border-radius:8px;
+        .sidebar-link { display:flex; align-items:center; padding-top:5px; gap:5px;
                         font-weight:500; color:#64748B; transition:0.25s; }
         .sidebar-link .material-icons { font-size:20px; color:#94A3B8; }
-        .sidebar-link:hover { background:#EEF2F7; color:#475569; }
+        .sidebar-link:hover { background:#0f1d88; color:#475569; }
         .sidebar-link:hover .material-icons { color:#475569; }
-        .sidebar-active { background:#4F46E5; color:#fff !important; }
+        .sidebar-active { background:#0f1d88; color:#fff !important; }
         .sidebar-active .material-icons { color:white !important; }
 
         .dropdown-show { display:block !important; animation:fadeIn .15s ease-in-out; }

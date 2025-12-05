@@ -315,93 +315,116 @@ render_table($equipment,'equipment','qty-input equip-input','rate');
 
 <!-- JS for quantity, subtotal, summary, and Flatpickr for personnel -->
 <script>
-document.addEventListener("DOMContentLoaded",function(){
-  function parseFloatSafe(v){return parseFloat(v)||0;}
-  function fmt(n){return Number(n||0).toFixed(2);}
+document.addEventListener("DOMContentLoaded", function () {
+    function parseFloatSafe(v) { return parseFloat(v) || 0; }
+    function fmt(n) { return Number(n || 0).toFixed(2); }
 
-  function updateRowSubtotal(row){
-      if(!row) return;
-      const persInput=row.querySelector(".pers-hours");
-      if(persInput){
-          const rate=parseFloatSafe(persInput.dataset.rate);
-          const hours=parseFloatSafe(persInput.value);
-          const persSub=row.querySelector(".pers-subtotal");
-          if(persSub) persSub.textContent=(hours*rate).toFixed(2);
-          return;
-      }
-      const input=row.querySelector(".qty-input");
-      if(!input) return;
-      const price=parseFloatSafe(input.dataset.price || input.dataset.rate);
-      const qty=parseFloatSafe(input.value);
-      const subtotalEl=row.querySelector(".row-subtotal, .equip-subtotal");
-      if(subtotalEl) subtotalEl.textContent=(qty*price).toFixed(2);
-  }
+    function updateRowSubtotal(row) {
+        if (!row) return;
 
-  function updateSummary(){
-      let subtotal=0;
-      document.querySelectorAll("tr").forEach(row=>{
-          const subEl=row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-          if(subEl) subtotal+=parseFloatSafe(subEl.textContent);
-      });
-      document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp=>subtotal+=parseFloatSafe(inp.value));
-      const tax=subtotal*0.10;
-      const grand=subtotal+tax;
-      document.getElementById("subtotalDisplay").textContent=fmt(subtotal);
-      document.getElementById("taxDisplay").textContent=fmt(tax);
-      document.getElementById("grandDisplay").textContent=fmt(grand);
-
-      const summaryEl=document.getElementById('orderSummary');
-      summaryEl.innerHTML='';
-      document.querySelectorAll("tr").forEach(row=>{
-        const name=row.querySelector('td')?.textContent?.trim();
-        const subEl=row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-        if(name && subEl && parseFloatSafe(subEl.textContent)>0){
-            let qty='';
-            if(row.querySelector('.pers-hours')) qty=(row.querySelector('.pers-hours').value||'0')+' hr';
-            else { const q=row.querySelector('.qty-input'); if(q) qty=q.value||'0'; }
-            const div=document.createElement('div');
-            div.className='summary-item flex justify-between py-1';
-            div.innerHTML=`<span style="color:#374151">${name}${qty?(' x '+qty):''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
-            summaryEl.appendChild(div);
+        // Personnel
+        const persInput = row.querySelector(".pers-hours");
+        if (persInput) {
+            const rate = parseFloatSafe(persInput.dataset.rate);
+            const hours = parseFloatSafe(persInput.value);
+            const persSub = row.querySelector(".pers-subtotal");
+            if (persSub) persSub.textContent = (hours * rate).toFixed(2);
+            return;
         }
-      });
-      if(summaryEl.innerHTML.trim()==='') summaryEl.innerHTML='<div class="empty-note">No items selected.</div>';
-  }
 
-  document.querySelectorAll(".qbtn, .qtbn").forEach(btn=>{
-      btn.addEventListener("click",()=>{
-          const input=btn.closest("td, div").querySelector("input");
-          if(!input) return;
-          let val=parseFloat(input.value)||0;
-          if(btn.classList.contains("plus")||btn.classList.contains("split-plus")||btn.classList.contains("ducted-plus")||btn.classList.contains("equip-plus")||btn.classList.contains("hour-plus")) val++;
-          else if(btn.classList.contains("minus")||btn.classList.contains("split-minus")||btn.classList.contains("ducted-minus")||btn.classList.contains("equip-minus")||btn.classList.contains("hour-minus")) val=Math.max(0,val-1);
-          input.value=val;
-          updateRowSubtotal(input.closest("tr"));
-          updateSummary();
-      });
-  });
+        // Products / Installations / Equipment
+        const input = row.querySelector(".qty-input");
+        if (!input) return;
+        const price = parseFloatSafe(input.dataset.price || input.dataset.rate);
+        const qty = parseFloatSafe(input.value);
+        const subtotalEl = row.querySelector(".row-subtotal, .equip-subtotal");
+        if (subtotalEl) subtotalEl.textContent = (qty * price).toFixed(2);
+    }
 
-  document.querySelectorAll(".qty-input").forEach(input=>{input.addEventListener('input',()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });});
+    function updateSummary() {
+        let subtotal = 0;
+        const summaryEl = document.getElementById('orderSummary');
+        summaryEl.innerHTML = '';
 
-  // Other Expenses
-  document.getElementById("addExpenseBtn").addEventListener("click",function(){
-      const container=document.getElementById("otherExpensesContainer");
-      const div=document.createElement("div");
-      div.className="flex gap-2 mb-2";
-      div.innerHTML=`
-        <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
-        <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
-        <button type="button" class="qbtn remove-expense">Remove</button>
-      `;
-      container.appendChild(div);
+        // 1️⃣ Products, installations, equipment, personnel
+        document.querySelectorAll("tr").forEach(row => {
+            const name = row.querySelector('td')?.textContent?.trim();
+            const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
+            if (name && subEl && parseFloatSafe(subEl.textContent) > 0) {
+                let qtyStr = '';
+                if (row.querySelector('.pers-hours')) {
+                    qtyStr = (row.querySelector('.pers-hours').value || '0') + ' hr';
+                } else {
+                    const q = row.querySelector('.qty-input');
+                    if (q) qtyStr = q.value || '0';
+                }
+                const div = document.createElement('div');
+                div.className = 'summary-item flex justify-between py-1';
+                div.innerHTML = `<span style="color:#374151">${name}${qtyStr ? (' x ' + qtyStr) : ''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
+                summaryEl.appendChild(div);
+                subtotal += parseFloatSafe(subEl.textContent);
+            }
+        });
 
-      div.querySelector(".remove-expense").addEventListener("click",function(){ div.remove(); updateSummary(); });
-      div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
-  });
+        // 2️⃣ Other Expenses
+        document.querySelectorAll("#otherExpensesContainer > div").forEach(div => {
+            const name = div.querySelector('input[name="other_expense_name[]"]').value || "Other Expense";
+            const amt = parseFloatSafe(div.querySelector('input[name="other_expense_amount[]"]').value);
+            if (amt > 0) {
+                const summaryItem = document.createElement('div');
+                summaryItem.className = 'summary-item flex justify-between py-1';
+                summaryItem.innerHTML = `<span style="color:#374151">${name}</span><span style="color:#111827">$${fmt(amt)}</span>`;
+                summaryEl.appendChild(summaryItem);
+                subtotal += amt;
+            }
+        });
 
-  // --------------------------
-  // Flatpickr for personnel dates
-  // --------------------------
+        // Totals
+        const tax = subtotal * 0.10;
+        const grand = subtotal + tax;
+        document.getElementById("subtotalDisplay").textContent = fmt(subtotal);
+        document.getElementById("taxDisplay").textContent = fmt(tax);
+        document.getElementById("grandDisplay").textContent = fmt(grand);
+
+        if (summaryEl.innerHTML.trim() === '') summaryEl.innerHTML = '<div class="empty-note">No items selected.</div>';
+    }
+
+    // 3️⃣ Quantity buttons
+    document.querySelectorAll(".qbtn, .qtbn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const input = btn.closest("td, div").querySelector("input");
+            if (!input) return;
+            let val = parseFloat(input.value) || 0;
+            if (btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus") || btn.classList.contains("hour-plus")) val++;
+            else if (btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus") || btn.classList.contains("hour-minus")) val = Math.max(0, val - 1);
+            input.value = val;
+            updateRowSubtotal(input.closest("tr"));
+            updateSummary();
+        });
+    });
+
+    // 4️⃣ Manual input changes
+    document.querySelectorAll(".qty-input").forEach(input => {
+        input.addEventListener('input', () => { updateRowSubtotal(input.closest("tr")); updateSummary(); });
+    });
+
+    // 5️⃣ Other Expenses Add/Remove
+    document.getElementById("addExpenseBtn").addEventListener("click", function () {
+        const container = document.getElementById("otherExpensesContainer");
+        const div = document.createElement("div");
+        div.className = "flex gap-2 mb-2";
+        div.innerHTML = `
+            <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
+            <input type="number" name="other_expense_amount[]" placeholder="Amount" class="input w-24" min="0" step="0.01">
+            <button type="button" class="qbtn remove-expense">Remove</button>
+        `;
+        container.appendChild(div);
+
+        div.querySelector(".remove-expense").addEventListener("click", function () { div.remove(); updateSummary(); });
+        div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
+    });
+    
+    // 6️⃣ Flatpicker 
  document.querySelectorAll('.personnel-date').forEach(input => {
     flatpickr(input, {
         dateFormat: "Y-m-d",
