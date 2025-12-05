@@ -40,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_id' => $pid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $price
+                'price' => $price,
+                'description' => null
             ];
         }
     }
@@ -57,7 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_id' => $sid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $price
+                'price' => $price,
+                'description' => null
             ];
         }
     }
@@ -76,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_id' => $did,
                 'installation_type' => $type,
                 'qty' => $qty,
-                'price' => $price
+                'price' => $price,
+                'description' => null
             ];
         }
     }
@@ -93,27 +96,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_id' => $eid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $rate
+                'price' => $rate,
+                'description' => null
             ];
         }
     }
 
-    // Save Other Expenses
-if (!empty($_POST['other_expense_name'])) {
-    foreach ($_POST['other_expense_name'] as $i => $expName) {
-
-        $expName = trim($expName);
-        $expAmount = floatval($_POST['other_expense_amount'][$i] ?? 0);
-
-        if ($expName !== '' && $expAmount > 0) {
-            $stmt = $pdo->prepare("
-                INSERT INTO order_items (order_id, item_category, item_id, description, qty, price)
-                VALUES (?, 'expense', 0, ?, 1, ?)
-            ");
-            $stmt->execute([$order_id, $expName, $expAmount]);
+    // OTHER EXPENSES
+    // -> collect into $items array so they appear in summary and totals
+    $other_names = $_POST['other_expense_name'] ?? [];
+    $other_amounts = $_POST['other_expense_amount'] ?? [];
+    foreach ($other_amounts as $i => $amt) {
+        $amt = floatval($amt);
+        $name = trim($other_names[$i] ?? '');
+        if ($amt > 0) {
+            $items[] = [
+                'item_category' => 'expense',
+                'item_id' => 0,
+                'installation_type' => null,
+                'qty' => 1,
+                'price' => $amt,
+                'description' => $name !== '' ? $name : 'Other expense'
+            ];
         }
     }
-}
 
     // PERSONNEL (qty=hours, also prepare dispatch rows)
     $personnel_dispatch_rows = [];
@@ -134,7 +140,8 @@ if (!empty($_POST['other_expense_name'])) {
             'item_id' => $pid,
             'installation_type' => null,
             'qty' => $hours,
-            'price' => $rate
+            'price' => $rate,
+            'description' => null
         ];
     }
 
@@ -169,10 +176,11 @@ if (!empty($_POST['other_expense_name'])) {
         ]);
         $order_id = $pdo->lastInsertId();
 
-        // Insert order_items (omit line_total since it's generated)
+        // Insert order_items (do NOT insert generated column line_total)
+        // include description column (nullable) so other expenses' name is saved
         $stmt_item = $pdo->prepare("
-            INSERT INTO order_items (order_id, item_category, item_id, installation_type, qty, price, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO order_items (order_id, item_category, item_id, installation_type, qty, price, description, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         foreach ($items as $it) {
             $stmt_item->execute([
@@ -181,7 +189,8 @@ if (!empty($_POST['other_expense_name'])) {
                 $it['item_id'] ?? 0,
                 $it['installation_type'] ?? null,
                 $it['qty'],
-                f2($it['price'])
+                f2($it['price']),
+                $it['description'] ?? null
             ]);
         }
 
@@ -464,130 +473,144 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function updateRowSubtotal(row){
       if(!row) return;
+
+      // Personnel
       const persInput = row.querySelector(".pers-hours");
       if(persInput){
           const rate = parseFloatSafe(persInput.dataset.rate);
           const hours = parseFloatSafe(persInput.value);
-          const persSub = row.querySelector(".pers-subtotal");
-          if(persSub) persSub.textContent = (hours * rate).toFixed(2);
+          const sub = row.querySelector(".pers-subtotal");
+          if(sub) sub.textContent = fmt(hours * rate);
           return;
       }
+
+      // Products / split / ducted
       const input = row.querySelector(".qty-input");
       if(!input) return;
-      const price = parseFloatSafe(input.dataset.price || input.dataset.rate);
+      const price = parseFloatSafe(input.dataset.price);
       const qty = parseFloatSafe(input.value);
-      const subtotalEl = row.querySelector(".row-subtotal, .equip-subtotal");
-      if(subtotalEl) subtotalEl.textContent = (qty * price).toFixed(2);
+      const sub = row.querySelector(".row-subtotal");
+      if(sub) sub.textContent = fmt(price * qty);
   }
 
   function updateSummary(){
-      let subtotal=0;
-      document.querySelectorAll("tr").forEach(row=>{
-          const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-          if(subEl) subtotal += parseFloatSafe(subEl.textContent);
+      let subtotal = 0;
+
+      // items subtotal
+      document.querySelectorAll(".row-subtotal, .pers-subtotal").forEach(el => {
+          subtotal += parseFloatSafe(el.textContent);
       });
-      document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp => subtotal += parseFloatSafe(inp.value));
+
+      // other expenses
+      document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp => {
+          subtotal += parseFloatSafe(inp.value);
+      });
+
+      // tax + grand
       const tax = subtotal * 0.10;
       const grand = subtotal + tax;
+
       document.getElementById("subtotalDisplay").textContent = fmt(subtotal);
       document.getElementById("taxDisplay").textContent = fmt(tax);
       document.getElementById("grandDisplay").textContent = fmt(grand);
 
-      // update orderSummary panel
-      const summaryEl = document.getElementById('orderSummary');
-      summaryEl.innerHTML = '';
-      document.querySelectorAll("tr").forEach(row=>{
-        const name = row.querySelector('td')?.textContent?.trim();
-        const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-        if(name && subEl && parseFloatSafe(subEl.textContent) > 0){
-            let qty = '';
-            if(row.querySelector('.pers-hours')) qty = (row.querySelector('.pers-hours').value || '0') + ' hr';
-            else {
-                const q = row.querySelector('.qty-input');
-                if(q) qty = q.value || '0';
-            }
-            const div = document.createElement('div');
-            div.className = 'summary-item flex justify-between py-1';
-            div.innerHTML = `<span style="color:#374151">${name}${qty?(' x '+qty):''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
-            summaryEl.appendChild(div);
-        }
+      // summary list
+      const summaryEl = document.getElementById("orderSummary");
+      summaryEl.innerHTML = "";
+
+      // normal items
+      document.querySelectorAll("tr").forEach(row => {
+          const name = row.querySelector("td")?.textContent?.trim();
+          const subEl = row.querySelector(".row-subtotal, .pers-subtotal");
+          if(!name || !subEl) return;
+
+          const amount = parseFloatSafe(subEl.textContent);
+          if(amount <= 0) return;
+
+          let qty = "";
+
+          if(row.querySelector(".pers-hours")){
+              qty = row.querySelector(".pers-hours").value + " hr";
+          } else if(row.querySelector(".qty-input")){
+              qty = row.querySelector(".qty-input").value;
+          }
+
+          const div = document.createElement("div");
+          div.className = "summary-item flex justify-between py-1";
+          div.innerHTML =
+              `<span>${name}${qty ? " x " + qty : ""}</span>
+               <span>$${fmt(amount)}</span>`;
+          summaryEl.appendChild(div);
       });
-      if(summaryEl.innerHTML.trim() === '') summaryEl.innerHTML = '<div class="empty-note">No items selected.</div>';
+
+      // other expenses
+      document.querySelectorAll("input[name='other_expense_name[]']").forEach((nameInput, i) => {
+          const amountInput = document.querySelectorAll("input[name='other_expense_amount[]']")[i];
+          const name = nameInput.value.trim();
+          const amount = parseFloatSafe(amountInput.value);
+
+          if(name && amount > 0){
+              const div = document.createElement("div");
+              div.className = "summary-item flex justify-between py-1";
+              div.innerHTML =
+                  `<span>${name}</span>
+                   <span>$${fmt(amount)}</span>`;
+              summaryEl.appendChild(div);
+          }
+      });
+
+      if(summaryEl.innerHTML.trim() === "")
+          summaryEl.innerHTML = "<div class='empty-note'>No items selected.</div>";
   }
 
-  // quantity +/- buttons
-  document.querySelectorAll(".qtbn, .qbtn").forEach(btn => {
+  // +/- buttons
+  document.querySelectorAll(".qtbn").forEach(btn => {
       btn.addEventListener("click", () => {
           const input = btn.closest("td, div").querySelector("input");
-          if (!input) return;
-          let val = parseFloat(input.value) || 0;
-          if (btn.classList.contains("plus") || btn.classList.contains("split-plus") || btn.classList.contains("ducted-plus") || btn.classList.contains("equip-plus") || btn.classList.contains("hour-plus")) val++;
-          else if (btn.classList.contains("minus") || btn.classList.contains("split-minus") || btn.classList.contains("ducted-minus") || btn.classList.contains("equip-minus") || btn.classList.contains("hour-minus")) val = Math.max(0, val - 1);
+          if(!input) return;
+          let val = parseFloatSafe(input.value);
+          if(btn.classList.contains("plus")) val++;
+          else if(btn.classList.contains("minus")) val = Math.max(0, val-1);
           input.value = val;
           updateRowSubtotal(input.closest("tr"));
           updateSummary();
       });
   });
 
-  document.querySelectorAll(".qty-input").forEach(input=>{
-      input.addEventListener('input', ()=>{ updateRowSubtotal(input.closest("tr")); updateSummary(); });
+  // qty input direct
+  document.querySelectorAll(".qty-input").forEach(input => {
+      input.addEventListener("input", () => {
+          updateRowSubtotal(input.closest("tr"));
+          updateSummary();
+      });
   });
 
-  // Other expenses add/remove
+  // other expenses
   document.getElementById("addExpenseBtn").addEventListener("click", function(){
       const container = document.getElementById("otherExpensesContainer");
       const div = document.createElement("div");
       div.className = "flex gap-2 mb-2";
       div.innerHTML = `
-          <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
-          <input type="number" name="other_expense_amount[]" value="0" class="input other-exp-amount w-24" step="0.01" min="0">
-          <button type="button" class="qbtn remove-expense">Remove</button>
+        <input type="text" name="other_expense_name[]" placeholder="Expense Name" class="input flex-1">
+        <input type="number" name="other_expense_amount[]" value="0" step="0.01" min="0" class="input w-28">
+        <button type="button" class="qbtn remove-expense">Remove</button>
       `;
       container.appendChild(div);
 
-      div.querySelector(".remove-expense").addEventListener("click", ()=>{ div.remove(); updateSummary(); });
-      div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
-  });
-
-  // simple search helpers
-  function simpleSearch(inputSel, tableSel, cellSel){
-    const input = document.querySelector(inputSel);
-    if(!input) return;
-    input.addEventListener('input', ()=>{
-      const q = input.value.trim().toLowerCase();
-      document.querySelectorAll(tableSel+" tbody tr").forEach(row=>{
-        const text = (row.querySelector(cellSel)?.textContent || '').toLowerCase();
-        row.style.display = text.includes(q) ? '' : 'none';
+      div.querySelector(".remove-expense").addEventListener("click", () => {
+          div.remove();
+          updateSummary();
       });
-    });
-  }
-  simpleSearch("#productSearch", ".products-table", "td.product-name");
-  simpleSearch("#splitSearch", "#splitTable", "td");
-  simpleSearch("#personnelSearch", ".personnel-table", "td");
-  simpleSearch("#equipmentSearch", ".products-table", "td");
 
-  // Flatpickr initialization for personnel (kept as-is)
-  document.querySelectorAll('.personnel-date').forEach(input => {
-    flatpickr(input, {
-        dateFormat: "Y-m-d",
-        allowInput: false,
-        onOpen: function(selectedDates, dateStr, instance) {
-            // fetch booked for this personnel (your endpoint)
-            const pid = input.dataset.personnelId;
-            fetch('fetch_personnel_booked.php?personnel_id=' + pid)
-                .then(res => res.json())
-                .then(booked => {
-                    instance.set('disable', booked || []);
-                })
-                .catch(()=>{ /* silently fail (keep calendar usable) */ });
-        }
-    });
+      div.querySelector("input[name='other_expense_amount[]']").addEventListener("input", updateSummary);
+      div.querySelector("input[name='other_expense_name[]']").addEventListener("input", updateSummary);
   });
 
-  // initial update
-  document.querySelectorAll("tr").forEach(row=> updateRowSubtotal(row));
+  // initial calc
+  document.querySelectorAll("tr").forEach(row => updateRowSubtotal(row));
   updateSummary();
 });
+
 </script>
 
 <?php
