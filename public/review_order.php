@@ -165,29 +165,33 @@ ob_start();
 
     <!-- Right PANEL -->
 
-<!-- PROFIT CARD -->
-<div class="bg-white p-4 rounded-xl shadow border border-gray-200 w-full">
-    <h3 class="text-lg font-semibold text-gray-700 mb-4">Profit</h3>
+ <!-- PROFIT CARD -->
+<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-fit sticky top-6 mb-4">
+    <h3 class="text-base font-semibold text-gray-700 mb-3">Profit Summary</h3>
 
-    <div class="space-y-3">
-        <div class="flex justify-between text-sm">
-            <span class="text-gray-600">Total Items Cost</span>
-            <span class="font-medium text-gray-900">₱<?= number_format($total_items_cost, 2) ?></span>
-        </div>
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Profit:</span>
+        <span>$<?= number_format($profit, 2) ?></span>
+    </div>
 
-        <div class="flex justify-between text-sm">
-            <span class="text-gray-600">Technician Cost</span>
-            <span class="font-medium text-gray-900">₱<?= number_format($total_technician_cost, 2) ?></span>
-        </div>
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Percent Margin:</span>
+        <span><?= number_format($percent_margin, 2) ?>%</span>
+    </div>
 
-        <div class="border-t my-2"></div>
+    <div class="flex justify-between text-gray-600 mb-1">
+        <span>Net Profit:</span>
+        <span>$<?= number_format($net_profit, 2) ?></span>
+    </div>
 
-        <div class="flex justify-between text-base font-semibold">
-            <span class="text-gray-700">Profit</span>
-            <span class="text-green-600">₱<?= number_format($profit, 2) ?></span>
-        </div>
+    <div class="border-t my-2"></div>
+
+    <div class="flex justify-between font-semibold text-gray-700">
+        <span>Total Profit:</span>
+        <span>$<?= number_format($total_profit, 2) ?></span>
     </div>
 </div>
+
 
 
     <!-- SUMMARY CARD -->
