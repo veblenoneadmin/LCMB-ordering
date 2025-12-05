@@ -35,21 +35,43 @@ foreach ($itemsRaw as $item) {
     $name = 'Unknown Item';
     $category = 'expense'; // default if table lookup fails
 
-    // Check each table
-    if ($row = $pdo->prepare("SELECT category, name FROM products WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+    // PRODUCTS
+    $stmt = $pdo->prepare("SELECT category, name FROM products WHERE id=?");
+    $stmt->execute([$item['item_id']]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = strtolower($row['category'] ?? 'product');
         $name     = $row['name'] ?? 'Unknown Product';
-    } elseif ($row = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+    }
+
+    // SPLIT INSTALLATION
+    $stmt = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?");
+    $stmt->execute([$item['item_id']]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = strtolower($row['category'] ?? 'split');
         $name     = $row['item_name'] ?? 'Unknown Split Installation';
-    } elseif ($row = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+    }
+
+    // DUCTED INSTALLATION
+    $stmt = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?");
+    $stmt->execute([$item['item_id']]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = strtolower($row['category'] ?? 'ducted');
         $name     = $row['equipment_name'] ?? 'Unknown Ducted Installation';
-    } elseif ($row = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?")->execute([$item['item_id'], $item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+    }
+
+    // PERSONNEL
+    $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
+    $stmt->execute([$item['item_id'], $item['item_id']]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = 'personnel';
         $name     = $row['name'] ?? 'Unknown Personnel';
         $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
-    } elseif ($row = $pdo->prepare("SELECT item FROM equipment WHERE id=?")->execute([$item['item_id']])->fetch(PDO::FETCH_ASSOC)) {
+    }
+
+    // EQUIPMENT
+    $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+    $stmt->execute([$item['item_id']]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $category = 'equipment';
         $name     = $row['item'] ?? 'Unknown Equipment';
     }
@@ -69,6 +91,7 @@ foreach ($itemsRaw as $item) {
         default:          $groupedItems['expense'][] = $item; break;
     }
 }
+
 
 // ==========================
 // CALCULATE TOTALS
