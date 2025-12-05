@@ -482,36 +482,48 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function updateSummary(){
       let subtotal=0;
+      const summaryEl = document.getElementById('orderSummary');
+      summaryEl.innerHTML = '';
+
+      // table items
       document.querySelectorAll("tr").forEach(row=>{
           const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
           if(subEl) subtotal += parseFloatSafe(subEl.textContent);
+
+          const name = row.querySelector('td')?.textContent?.trim();
+          if(name && subEl && parseFloatSafe(subEl.textContent) > 0){
+              let qty = '';
+              if(row.querySelector('.pers-hours')) qty = (row.querySelector('.pers-hours').value || '0') + ' hr';
+              else {
+                  const q = row.querySelector('.qty-input');
+                  if(q) qty = q.value || '0';
+              }
+              const div = document.createElement('div');
+              div.className = 'summary-item flex justify-between py-1';
+              div.innerHTML = `<span style="color:#374151">${name}${qty?(' x '+qty):''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
+              summaryEl.appendChild(div);
+          }
       });
-      document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp => subtotal += parseFloatSafe(inp.value));
+
+      // other expenses
+      document.querySelectorAll("input[name='other_expense_amount[]']").forEach((inp, i)=>{
+          const val = parseFloatSafe(inp.value);
+          subtotal += val;
+          if(val > 0){
+              const name = (document.querySelectorAll("input[name='other_expense_name[]']")[i]?.value || 'Other expense');
+              const div = document.createElement('div');
+              div.className = 'summary-item flex justify-between py-1';
+              div.innerHTML = `<span style="color:#374151">${name}</span><span style="color:#111827">$${fmt(val)}</span>`;
+              summaryEl.appendChild(div);
+          }
+      });
+
       const tax = subtotal * 0.10;
       const grand = subtotal + tax;
       document.getElementById("subtotalDisplay").textContent = fmt(subtotal);
       document.getElementById("taxDisplay").textContent = fmt(tax);
       document.getElementById("grandDisplay").textContent = fmt(grand);
 
-      // update orderSummary panel
-      const summaryEl = document.getElementById('orderSummary');
-      summaryEl.innerHTML = '';
-      document.querySelectorAll("tr").forEach(row=>{
-        const name = row.querySelector('td')?.textContent?.trim();
-        const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
-        if(name && subEl && parseFloatSafe(subEl.textContent) > 0){
-            let qty = '';
-            if(row.querySelector('.pers-hours')) qty = (row.querySelector('.pers-hours').value || '0') + ' hr';
-            else {
-                const q = row.querySelector('.qty-input');
-                if(q) qty = q.value || '0';
-            }
-            const div = document.createElement('div');
-            div.className = 'summary-item flex justify-between py-1';
-            div.innerHTML = `<span style="color:#374151">${name}${qty?(' x '+qty):''}</span><span style="color:#111827">$${fmt(parseFloatSafe(subEl.textContent))}</span>`;
-            summaryEl.appendChild(div);
-        }
-      });
       if(summaryEl.innerHTML.trim() === '') summaryEl.innerHTML = '<div class="empty-note">No items selected.</div>';
   }
 
@@ -545,8 +557,15 @@ document.addEventListener("DOMContentLoaded", function(){
       `;
       container.appendChild(div);
 
-      div.querySelector(".remove-expense").addEventListener("click", ()=>{ div.remove(); updateSummary(); });
-      div.querySelector('input[name="other_expense_amount[]"]').addEventListener("input", updateSummary);
+      const amountInput = div.querySelector('input[name="other_expense_amount[]"]');
+      amountInput.addEventListener("input", updateSummary);
+
+      div.querySelector(".remove-expense").addEventListener("click", ()=>{
+          div.remove();
+          updateSummary();
+      });
+
+      updateSummary();
   });
 
   // simple search helpers
@@ -572,14 +591,13 @@ document.addEventListener("DOMContentLoaded", function(){
         dateFormat: "Y-m-d",
         allowInput: false,
         onOpen: function(selectedDates, dateStr, instance) {
-            // fetch booked for this personnel (your endpoint)
             const pid = input.dataset.personnelId;
             fetch('fetch_personnel_booked.php?personnel_id=' + pid)
                 .then(res => res.json())
                 .then(booked => {
                     instance.set('disable', booked || []);
                 })
-                .catch(()=>{ /* silently fail (keep calendar usable) */ });
+                .catch(()=>{});
         }
     });
   });
@@ -589,6 +607,7 @@ document.addEventListener("DOMContentLoaded", function(){
   updateSummary();
 });
 </script>
+
 
 <?php
 $content = ob_get_clean();
