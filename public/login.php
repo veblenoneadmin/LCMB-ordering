@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body {
             margin: 0;
             font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #3f51b5, #2196f3);
+            background-color: #f4f5f7; /* Light Material background */
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -44,10 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .card {
-            background: #fff;
+            background: #ffffff;
             padding: 40px 30px;
             border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); /* subtle shadow */
             width: 350px;
             text-align: center;
         }
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .card input:focus {
             border-color: #3f51b5;
-            box-shadow: 0 0 5px rgba(63,81,181,0.5);
+            box-shadow: 0 0 5px rgba(63,81,181,0.2);
             outline: none;
         }
 
