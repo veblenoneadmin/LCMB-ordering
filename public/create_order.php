@@ -180,15 +180,30 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <div class="flex-1 flex flex-col gap-6">
 
 <!-- CLIENT INFO -->
-<div class="bg-white p-3 rounded-xl shadow border border-gray-200">
-<h5 class="text-lg font-medium text-gray-700 mb-3">Client Information</h5>
-<div class="grid grid-cols-2 gap-4">
-<input type="text" name="customer_name" placeholder="Name" class="input" required>
-<input type="email" name="customer_email" placeholder="Email" class="input">
-<input type="text" name="contact_number" placeholder="Phone" class="input">
-<input type="text" name="job_address" placeholder="Address" class="input">
-<input type="date" name="appointment_date" value="<?= date('Y-m-d') ?>" class="input">
-</div>
+<div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+  <h5 class="text-lg font-medium text-gray-700 mb-4">Client Information</h5>
+  <div class="grid grid-cols-2 gap-6">
+    <div class="relative">
+      <input type="text" name="customer_name" id="customer_name" placeholder=" " class="material-input" required>
+      <label for="customer_name">Name</label>
+    </div>
+    <div class="relative">
+      <input type="email" name="customer_email" id="customer_email" placeholder=" " class="material-input">
+      <label for="customer_email">Email</label>
+    </div>
+    <div class="relative">
+      <input type="text" name="contact_number" id="contact_number" placeholder=" " class="material-input">
+      <label for="contact_number">Phone</label>
+    </div>
+    <div class="relative">
+      <input type="text" name="job_address" id="job_address" placeholder=" " class="material-input">
+      <label for="job_address">Address</label>
+    </div>
+    <div class="relative">
+      <input type="date" name="appointment_date" id="appointment_date" value="<?= date('Y-m-d') ?>" class="material-input">
+      <label for="appointment_date">Appointment Date</label>
+    </div>
+  </div>
 </div>
 
 <!-- PRODUCTS TABLE -->

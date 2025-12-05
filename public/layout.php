@@ -53,6 +53,41 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         margin-top: 10px;
     }
+
+    .material-input {
+  width: 100%;
+  padding: 1rem 0.75rem 0.25rem 0.75rem;
+  border: 1px solid #cbd5e0; /* Tailwind gray-300 */
+  border-radius: 0.5rem;
+  background-color: transparent;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.material-input:focus {
+  border-color: #3b82f6; /* Tailwind blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.material-input + label {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  color: #9ca3af; /* Tailwind gray-400 */
+  pointer-events: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.material-input:focus + label,
+.material-input:not(:placeholder-shown) + label {
+  top: 0.25rem;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  color: #3b82f6; /* Tailwind blue-500 */
+  background: white;
+  padding: 0 0.25rem;
+}
     </style>
      <!-- ⭐ ADDED: FullCalendar CSS & JS (required for calendar to appear) -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">

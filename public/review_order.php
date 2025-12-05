@@ -27,7 +27,7 @@ $groupedItems = [
     'ducted'     => [],
     'personnel'  => [],
     'equipment'  => [],
-    'expense'    => []
+    'expense'    => []  // FIXED: include expenses
 ];
 
 foreach ($itemsRaw as $item) {
@@ -76,6 +76,12 @@ foreach ($itemsRaw as $item) {
         $name     = $row['item'] ?? 'Unknown Equipment';
     }
 
+    // FIXED: Handle 'expense' type items
+    if ($item['item_type'] === 'expense') {
+        $category = 'expense';
+        $name = $item['installation_type'] ?? 'Other Expense';
+    }
+
     $item['name'] = $name;
     $item['qty']  = $item['qty'] ?? 1;
     $item['price']= $item['price'] ?? 0;
@@ -88,10 +94,9 @@ foreach ($itemsRaw as $item) {
         case 'ducted':    $groupedItems['ducted'][]  = $item; break;
         case 'personnel': $groupedItems['personnel'][] = $item; break;
         case 'equipment': $groupedItems['equipment'][] = $item; break;
-        default:          $groupedItems['expense'][] = $item; break;
+        default:          $groupedItems['expense'][] = $item; break;  // FIXED
     }
 }
-
 
 // ==========================
 // CALCULATE TOTALS
@@ -115,12 +120,12 @@ $total_profit   = $profit;
 ob_start();
 ?>
 
-<!-- HTML CONTENT -->
+<!-- HTML CONTENT (same as before, tables, right panel, etc.) -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
-            <p class="text-gray-500 text-sm mt-1">Verify all order details before sending to ServiceM8.</p>
+            <p class="text-gray-500 text-sm mt-1">Verify all order details before sending.</p>
         </div>
 
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
@@ -149,7 +154,7 @@ ob_start();
             'ducted'    => 'Ducted Installations',
             'personnel' => 'Personnel',
             'equipment' => 'Equipment',
-            'expense'   => 'Other Expenses'
+            'expense'   => 'Other Expenses' // FIXED
         ];
         ?>
         <?php foreach ($titles as $key => $title): ?>
