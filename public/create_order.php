@@ -485,8 +485,11 @@ document.addEventListener("DOMContentLoaded", function(){
       const summaryEl = document.getElementById('orderSummary');
       summaryEl.innerHTML = '';
 
-      // table items
+      // table items (only rows with qty-input or pers-hours)
       document.querySelectorAll("tr").forEach(row=>{
+          const input = row.querySelector(".qty-input, .pers-hours");
+          if(!input) return;
+
           const subEl = row.querySelector(".row-subtotal, .pers-subtotal, .equip-subtotal");
           if(subEl) subtotal += parseFloatSafe(subEl.textContent);
 
@@ -585,7 +588,7 @@ document.addEventListener("DOMContentLoaded", function(){
   simpleSearch("#personnelSearch", ".personnel-table", "td");
   simpleSearch("#equipmentSearch", ".products-table", "td");
 
-  // Flatpickr initialization for personnel (kept as-is)
+  // Flatpickr initialization for personnel
   document.querySelectorAll('.personnel-date').forEach(input => {
     flatpickr(input, {
         dateFormat: "Y-m-d",
