@@ -35,14 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT price FROM products WHERE id=? LIMIT 1");
             $stmt->execute([$pid]);
             $price = (float)$stmt->fetchColumn();
-            $line_total = $qty * $price;
             $items[] = [
                 'item_category' => 'product',
                 'item_id' => $pid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $price,
-                'line_total' => $line_total
+                'price' => $price
             ];
         }
     }
@@ -54,14 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id=? LIMIT 1");
             $stmt->execute([$sid]);
             $price = (float)$stmt->fetchColumn();
-            $line_total = $qty * $price;
             $items[] = [
                 'item_category' => 'split',
                 'item_id' => $sid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $price,
-                'line_total' => $line_total
+                'price' => $price
             ];
         }
     }
@@ -75,14 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
             $stmt->execute([$did]);
             $price = (float)$stmt->fetchColumn();
-            $line_total = $qty * $price;
             $items[] = [
                 'item_category' => 'ducted',
                 'item_id' => $did,
                 'installation_type' => $type,
                 'qty' => $qty,
-                'price' => $price,
-                'line_total' => $line_total
+                'price' => $price
             ];
         }
     }
@@ -94,14 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT rate FROM equipment WHERE id=? LIMIT 1");
             $stmt->execute([$eid]);
             $rate = (float)$stmt->fetchColumn();
-            $line_total = $qty * $rate;
             $items[] = [
                 'item_category' => 'equipment',
                 'item_id' => $eid,
                 'installation_type' => null,
                 'qty' => $qty,
-                'price' => $rate,
-                'line_total' => $line_total
+                'price' => $rate
             ];
         }
     }
@@ -118,8 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_id' => 0,
                 'installation_type' => $name ?: 'Other expense',
                 'qty' => 1,
-                'price' => $amt,
-                'line_total' => $amt
+                'price' => $amt
             ];
         }
     }
@@ -133,25 +124,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$pid]);
         $rate = (float)$stmt->fetchColumn();
         $date = $_POST['personnel_date'][$pid] ?? $appointment_date ?? date('Y-m-d');
-        $line_total = $hours * $rate;
-        $items[] = [
-            'item_category' => 'personnel',
-            'item_id' => $pid,
-            'installation_type' => null,
-            'qty' => $hours,
-            'price' => $rate,
-            'line_total' => $line_total
-        ];
         $personnel_dispatch_rows[] = [
             'personnel_id' => (int)$pid,
             'date' => $date,
             'hours' => $hours
         ];
+        $items[] = [
+            'item_category' => 'personnel',
+            'item_id' => $pid,
+            'installation_type' => null,
+            'qty' => $hours,
+            'price' => $rate
+        ];
     }
 
     // Totals
     $subtotal = 0.0;
-    foreach ($items as $it) $subtotal += (float)$it['line_total'];
+    foreach ($items as $it) $subtotal += $it['qty'] * $it['price'];
     $tax = round($subtotal * 0.10, 2);
     $grand_total = round($subtotal + $tax, 2);
     $discount = 0.00;
@@ -180,10 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         $order_id = $pdo->lastInsertId();
 
-        // Insert order_items with item_category + line_total
+        // Insert order_items (omit line_total since it's generated)
         $stmt_item = $pdo->prepare("
-            INSERT INTO order_items (order_id,item_category,item_id,installation_type,qty,price,line_total,created_at)
-            VALUES (?,?,?,?,?,?,?,NOW())
+            INSERT INTO order_items (order_id, item_category, item_id, installation_type, qty, price, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
         ");
         foreach ($items as $it) {
             $stmt_item->execute([
@@ -192,8 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $it['item_id'] ?? 0,
                 $it['installation_type'] ?? null,
                 $it['qty'],
-                f2($it['price']),
-                f2($it['line_total'])
+                f2($it['price'])
             ]);
         }
 
