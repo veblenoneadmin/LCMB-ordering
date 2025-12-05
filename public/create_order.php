@@ -13,12 +13,12 @@ function safeFetch($pdo, $query){
 $products = safeFetch($pdo, "SELECT id, name, price, category FROM products ORDER BY name ASC");
 $split_installations = safeFetch($pdo, "SELECT id, item_name AS name, unit_price AS price, category FROM split_installation ORDER BY item_name ASC");
 $ducted_installations = safeFetch($pdo, "SELECT id, equipment_name AS name, total_cost AS price, category FROM ductedinstallations ORDER BY equipment_name ASC");
-$personnel = safeFetch($pdo, "SELECT id, name, rate, category FROM personnel ORDER BY name ASC");
-$equipment = safeFetch($pdo, "SELECT id, item AS name, rate, category FROM equipment ORDER BY item ASC");
+$personnel = safeFetch($pdo, "SELECT id, name, rate FROM personnel ORDER BY name ASC");
+$equipment = safeFetch($pdo, "SELECT id, item AS name, rate FROM equipment ORDER BY item ASC");
 
 function f2($v){ return number_format((float)$v, 2, '.', ''); }
 
-// POST Handling
+// Handle POST
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $customer_name = trim($_POST['customer_name'] ?? '');
     $customer_email = trim($_POST['customer_email'] ?? '');
@@ -28,96 +28,77 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     $items = [];
 
-    // Helper function to fetch item price and category
-    function fetchItemData($pdo, $table, $id, $priceField, $categoryField='category'){
-        $stmt = $pdo->prepare("SELECT $priceField AS price, $categoryField AS category FROM $table WHERE id=? LIMIT 1");
-        $stmt->execute([$id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: ['price'=>0,'category'=>'Other Expense'];
-    }
-
-    // Products
+    // PRODUCTS
     foreach($_POST['product'] ?? [] as $pid => $qty){
         $qty = intval($qty);
-        if($qty>0){
-            $data = fetchItemData($pdo,'products',$pid,'price');
-            $items[] = ['item_type'=>'product','item_category'=>$data['category'] ?? 'Other Expense','item_id'=>$pid,'installation_type'=>null,'qty'=>$qty,'price'=>$data['price']];
+        if($qty > 0){
+            $stmt = $pdo->prepare("SELECT price FROM products WHERE id=? LIMIT 1");
+            $stmt->execute([$pid]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = ['item_id'=>$pid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
         }
     }
 
-    // Split Installation
+    // SPLIT INSTALLATIONS
     foreach($_POST['split'] ?? [] as $sid => $qty){
         $qty = intval($qty);
         if($qty>0){
-            $data = fetchItemData($pdo,'split_installation',$sid,'unit_price');
-            $items[] = ['item_type'=>'installation','item_category'=>$data['category'] ?? 'Other Expense','item_id'=>$sid,'installation_type'=>null,'qty'=>$qty,'price'=>$data['price']];
+            $stmt = $pdo->prepare("SELECT unit_price FROM split_installation WHERE id=? LIMIT 1");
+            $stmt->execute([$sid]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = ['item_id'=>$sid,'installation_type'=>null,'qty'=>$qty,'price'=>$price];
         }
     }
 
-    // Ducted Installation
-    foreach($_POST['ducted'] ?? [] as $did=>$data_post){
-        $qty = intval($data_post['qty'] ?? 0);
-        $type = $data_post['type'] ?? 'indoor';
+    // DUCTED INSTALLATIONS
+    foreach($_POST['ducted'] ?? [] as $did=>$data){
+        $qty = intval($data['qty']??0);
+        $type = $data['type'] ?? 'indoor';
         if($qty>0){
-            $data = fetchItemData($pdo,'ductedinstallations',$did,'total_cost');
-            $items[] = [
-                'item_type'=>'installation',
-                'item_category'=>$data['category'] ?? 'Other Expense',
-                'item_id'=>$did,
-                'installation_type'=>in_array($type,['indoor','outdoor'])?$type:'indoor',
-                'qty'=>$qty,
-                'price'=>$data['price']
-            ];
+            $stmt = $pdo->prepare("SELECT total_cost FROM ductedinstallations WHERE id=? LIMIT 1");
+            $stmt->execute([$did]);
+            $price = (float)$stmt->fetchColumn();
+            $items[] = ['item_id'=>$did,'installation_type'=>in_array($type,['indoor','outdoor'])?$type:'indoor','qty'=>$qty,'price'=>$price];
         }
     }
 
-    // Equipment
+    // EQUIPMENT
     foreach($_POST['equipment'] ?? [] as $eid => $qty){
         $qty = intval($qty);
         if($qty>0){
-            $data = fetchItemData($pdo,'equipment',$eid,'rate');
-            $items[] = ['item_type'=>'equipment','item_category'=>$data['category'] ?? 'Materials','item_id'=>$eid,'installation_type'=>null,'qty'=>$qty,'price'=>$data['price']];
+            $stmt = $pdo->prepare("SELECT rate FROM equipment WHERE id=? LIMIT 1");
+            $stmt->execute([$eid]);
+            $rate = (float)$stmt->fetchColumn();
+            $items[] = ['item_id'=>$eid,'installation_type'=>null,'qty'=>$qty,'price'=>$rate];
         }
     }
 
-    // Other Expenses
+    // OTHER EXPENSES
     $other_names = $_POST['other_expense_name'] ?? [];
     $other_amounts = $_POST['other_expense_amount'] ?? [];
     foreach($other_amounts as $i=>$amt){
         $amt = floatval($amt);
         $name = trim($other_names[$i] ?? '');
         if($amt>0){
-            $items[] = [
-                'item_type'=>'expense',
-                'item_category'=>'Other Expense',
-                'item_id'=>0,
-                'installation_type'=>$name ?: 'Other Expense',
-                'qty'=>1,
-                'price'=>$amt
-            ];
+            $items[] = ['item_id'=>0,'installation_type'=>$name ?: 'Other expense','qty'=>1,'price'=>$amt];
         }
     }
 
-    // Personnel
+    // PERSONNEL
     $personnel_dispatch_rows = [];
     foreach($_POST['personnel_hours'] ?? [] as $pid=>$hours_raw){
         $hours = floatval($hours_raw);
         if($hours<=0) continue;
-        $data = fetchItemData($pdo,'personnel',$pid,'rate');
+        $stmt = $pdo->prepare("SELECT rate FROM personnel WHERE id=? LIMIT 1");
+        $stmt->execute([$pid]);
+        $rate = (float)$stmt->fetchColumn();
         $date = $_POST['personnel_date'][$pid] ?? $appointment_date ?? date('Y-m-d');
-        $items[] = [
-            'item_type'=>'personnel',
-            'item_category'=>$data['category'] ?? 'Personnel',
-            'item_id'=>$pid,
-            'installation_type'=>null,
-            'qty'=>$hours,
-            'price'=>$data['price']
-        ];
+        $items[] = ['item_id'=>$pid,'installation_type'=>null,'qty'=>$hours,'price'=>$rate];
         $personnel_dispatch_rows[] = ['personnel_id'=>$pid,'date'=>$date,'hours'=>$hours];
     }
 
     // Totals
-    $subtotal = 0; foreach($items as $it) $subtotal += ($it['qty']*$it['price']);
+    $subtotal=0; foreach($items as $it) $subtotal += ($it['qty']*$it['price']);
     $tax = round($subtotal*0.10,2);
     $grand_total = round($subtotal+$tax,2);
     $discount = 0.0;
@@ -135,13 +116,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $order_id = $pdo->lastInsertId();
 
         // Insert items
-        $stmt_item = $pdo->prepare("INSERT INTO order_items (order_id,item_type,item_category,item_id,installation_type,qty,price,created_at) VALUES (?,?,?,?,?,?,?,NOW())");
+        $stmt_item = $pdo->prepare("INSERT INTO order_items (order_id,item_id,installation_type,qty,price,created_at) VALUES (?,?,?,?,?,NOW())");
         foreach($items as $it){
             $stmt_item->execute([
                 $order_id,
-                $it['item_type'],
-                $it['item_category'],
-                $it['item_id']??null,
+                $it['item_id']??0,
                 $it['installation_type']??null,
                 $it['qty'],
                 f2($it['price'])
@@ -167,6 +146,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
 }
 ?>
+
 
 
 <?php ob_start(); ?>

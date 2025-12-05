@@ -19,7 +19,7 @@ $stmtItem->execute([$order_id]);
 $itemsRaw = $stmtItem->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================
-// GROUP ITEMS AUTOMATICALLY BASED ON TABLE CATEGORY
+// GROUP ITEMS BASED ON CATEGORY
 // ==========================
 $groupedItems = [
     'product'    => [],
@@ -27,107 +27,88 @@ $groupedItems = [
     'ducted'     => [],
     'personnel'  => [],
     'equipment'  => [],
-    'expense'    => []  // FIXED: include expenses
+    'expense'    => []
 ];
 
 foreach ($itemsRaw as $item) {
+    $name = $item['installation_type'] ?? 'Unknown Item';
+    $category = 'expense'; // default
 
-    $name = 'Unknown Item';
-    $category = 'expense'; // default if table lookup fails
+    // Check each table
+    if ($item['item_id']) {
+        // PRODUCTS
+        $stmt = $pdo->prepare("SELECT category, name FROM products WHERE id=?");
+        $stmt->execute([$item['item_id']]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = strtolower($row['category'] ?? 'product');
+            $name = $row['name'];
+        }
 
-    // PRODUCTS
-    $stmt = $pdo->prepare("SELECT category, name FROM products WHERE id=?");
-    $stmt->execute([$item['item_id']]);
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $category = strtolower($row['category'] ?? 'product');
-        $name     = $row['name'] ?? 'Unknown Product';
-    }
+        // SPLIT INSTALLATION
+        $stmt = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?");
+        $stmt->execute([$item['item_id']]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = strtolower($row['category'] ?? 'split');
+            $name = $row['item_name'];
+        }
 
-    // SPLIT INSTALLATION
-    $stmt = $pdo->prepare("SELECT category, item_name FROM split_installation WHERE id=?");
-    $stmt->execute([$item['item_id']]);
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $category = strtolower($row['category'] ?? 'split');
-        $name     = $row['item_name'] ?? 'Unknown Split Installation';
-    }
+        // DUCTED INSTALLATION
+        $stmt = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?");
+        $stmt->execute([$item['item_id']]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = strtolower($row['category'] ?? 'ducted');
+            $name = $row['equipment_name'];
+        }
 
-    // DUCTED INSTALLATION
-    $stmt = $pdo->prepare("SELECT category, equipment_name FROM ductedinstallations WHERE id=?");
-    $stmt->execute([$item['item_id']]);
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $category = strtolower($row['category'] ?? 'ducted');
-        $name     = $row['equipment_name'] ?? 'Unknown Ducted Installation';
-    }
+        // PERSONNEL
+        $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=?");
+        $stmt->execute([$item['item_id']]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = 'personnel';
+            $name = $row['name'];
+            $item['price'] = $row['rate'];
+        }
 
-    // PERSONNEL
-    $stmt = $pdo->prepare("SELECT name, rate FROM personnel WHERE id=? OR technician_uuid=?");
-    $stmt->execute([$item['item_id'], $item['item_id']]);
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $category = 'personnel';
-        $name     = $row['name'] ?? 'Unknown Personnel';
-        $item['price'] = isset($row['rate']) ? floatval($row['rate']) : ($item['price'] ?? 0);
-    }
-
-    // EQUIPMENT
-    $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
-    $stmt->execute([$item['item_id']]);
-    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $category = 'equipment';
-        $name     = $row['item'] ?? 'Unknown Equipment';
-    }
-
-    // FIXED: Handle 'expense' type items
-    if ($item['item_type'] === 'expense') {
-        $category = 'expense';
-        $name = $item['installation_type'] ?? 'Other Expense';
+        // EQUIPMENT
+        $stmt = $pdo->prepare("SELECT item FROM equipment WHERE id=?");
+        $stmt->execute([$item['item_id']]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $category = 'equipment';
+            $name = $row['item'];
+        }
     }
 
     $item['name'] = $name;
     $item['qty']  = $item['qty'] ?? 1;
     $item['price']= $item['price'] ?? 0;
-    $item['cost'] = $item['cost'] ?? ($item['price'] * 0.70);
 
-    // Assign to group
-    switch ($category) {
-        case 'product':   $groupedItems['product'][] = $item; break;
-        case 'split':     $groupedItems['split'][]   = $item; break;
-        case 'ducted':    $groupedItems['ducted'][]  = $item; break;
-        case 'personnel': $groupedItems['personnel'][] = $item; break;
-        case 'equipment': $groupedItems['equipment'][] = $item; break;
-        default:          $groupedItems['expense'][] = $item; break;  // FIXED
-    }
+    $groupedItems[$category][] = $item;
 }
 
 // ==========================
 // CALCULATE TOTALS
 // ==========================
 $subtotal = 0;
-$total_cost = 0;
 foreach ($groupedItems as $items) {
     foreach ($items as $item) {
-        $subtotal   += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
-        $total_cost += ($item['cost'] ?? 0) * ($item['qty'] ?? 1);
+        $subtotal += ($item['price'] ?? 0) * ($item['qty'] ?? 1);
     }
 }
-
-$tax         = round($subtotal * 0.10, 2);
+$tax = round($subtotal * 0.10, 2);
 $grand_total = $subtotal + $tax;
-$profit         = $subtotal - $total_cost;
-$percent_margin = $subtotal > 0 ? ($profit / $subtotal) * 100 : 0;
-$net_profit     = $subtotal > 0 ? (($profit - $tax) / $subtotal) * 100 : 0;
-$total_profit   = $profit;
 
 ob_start();
 ?>
 
-<!-- HTML CONTENT (same as before, tables, right panel, etc.) -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
+        <!-- Order Info -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
             <p class="text-gray-500 text-sm mt-1">Verify all order details before sending.</p>
         </div>
 
+        <!-- Client Info -->
         <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Client Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,7 +127,7 @@ ob_start();
             </div>
         </div>
 
-        <!-- GROUPED ITEMS -->
+        <!-- Grouped Items -->
         <?php
         $titles = [
             'product'   => 'Ordered Products',
@@ -154,7 +135,7 @@ ob_start();
             'ducted'    => 'Ducted Installations',
             'personnel' => 'Personnel',
             'equipment' => 'Equipment',
-            'expense'   => 'Other Expenses' // FIXED
+            'expense'   => 'Other Expenses'
         ];
         ?>
         <?php foreach ($titles as $key => $title): ?>
@@ -167,7 +148,7 @@ ob_start();
                                 <tr>
                                     <th class="px-4 py-3 text-left">Item</th>
                                     <th class="px-4 py-3 text-center">Price</th>
-                                    <th class="px-4 py-3 text-center">Quantity/Hours</th>
+                                    <th class="px-4 py-3 text-center">Qty/Hours</th>
                                     <th class="px-4 py-3 text-right">Subtotal</th>
                                 </tr>
                             </thead>
@@ -175,12 +156,12 @@ ob_start();
                                 <?php foreach ($groupedItems[$key] as $item):
                                     $item_sub = ($item['price'] ?? 0) * ($item['qty'] ?? 1);
                                 ?>
-                                    <tr class="border-t hover:bg-gray-50">
-                                        <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
-                                        <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
-                                        <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
-                                        <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
-                                    </tr>
+                                <tr class="border-t hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-left"><?= htmlspecialchars($item['name']) ?></td>
+                                    <td class="px-4 py-3 text-center"><?= number_format($item['price'], 2) ?></td>
+                                    <td class="px-4 py-3 text-center"><?= $item['qty'] ?></td>
+                                    <td class="px-4 py-3 text-right font-medium"><?= number_format($item_sub, 2) ?></td>
+                                </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
