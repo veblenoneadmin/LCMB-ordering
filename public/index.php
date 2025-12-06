@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let allEvents = <?= json_encode($events) ?>;
     let calendarEl = document.getElementById('calendar');
 
+    // Initialize FullCalendar
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         height: 650,
@@ -128,36 +129,37 @@ document.addEventListener('DOMContentLoaded', function () {
     calendar.render();
 
     // Pending order modal logic
+    const pendingItems = document.querySelectorAll('.pending-item');
     const pendingModal = document.getElementById('pendingModal');
     const pmContent = document.getElementById('pendingModalContent');
     const pmClose = document.getElementById('pmClose');
 
-    function openPendingModal(item) {
-        const { id: orderId, customer, total } = item.dataset;
+    pendingItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const orderId = item.getAttribute('data-id');
+            const customerName = item.getAttribute('data-customer');
+            const total = item.getAttribute('data-total');
 
-        document.getElementById('pmCustomer').innerText = 'Customer: ' + customer;
-        document.getElementById('pmItems').innerText = 'Items: TBD'; // fetch from order_items table if needed
-        document.getElementById('pmTotal').innerText = 'Total: ₱' + total;
-        document.getElementById('pmOrderId').value = orderId;
+            document.getElementById('pmCustomer').innerText = 'Customer: ' + customerName;
+            document.getElementById('pmItems').innerText = 'Items: TBD'; // you can calculate from order_items table if needed
+            document.getElementById('pmTotal').innerText = 'Total: ₱' + total;
+            document.getElementById('pmOrderId').value = orderId;
 
-        pendingModal.classList.remove('hidden');
-        void pmContent.offsetWidth;
-        pendingModal.classList.add('show');
-    }
-
-    // Add click listener to each pending order
-    document.querySelectorAll('.pending-item').forEach(item => {
-        item.addEventListener('click', () => openPendingModal(item));
+            // Show modal
+            pendingModal.classList.remove('hidden');
+            void pmContent.offsetWidth; // trigger reflow for transition
+            pendingModal.classList.add('show');
+        });
     });
 
-    // Close button
+    // Close modal
     pmClose.addEventListener('click', () => {
         pendingModal.classList.remove('show');
         setTimeout(() => pendingModal.classList.add('hidden'), 300);
     });
 });
-
 </script>
+
 
 <?php
 $content = ob_get_clean();
