@@ -95,7 +95,7 @@ ob_start();
             $date = date('d M', strtotime($o['created_at']));
             $time = date('h:i A', strtotime($o['created_at']));
         ?>
-        <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
+        <div class="mb-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
              data-id="<?= $o['id'] ?>"
              data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
              data-total="<?= number_format($o['total_amount'],2) ?>">
