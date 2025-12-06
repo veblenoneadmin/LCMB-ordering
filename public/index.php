@@ -99,10 +99,8 @@ ob_start();
              data-id="<?= $o['id'] ?>"
              data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
              data-total="<?= number_format($o['total_amount'],2) ?>">
-            <p class="text-xs text-indigo-600 font-semibold">New Order</p>
-            <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
-            <p class="text-sm text-gray-500"><?= $date ?></p>
-            <p class="text-xs text-gray-400"><?= $time ?></p>
+            <p class="text-lg font-bold text-gray-800">New Order#<?= $o['id'] ?></p>
+            <p class="text-sm text-gray-500"><?= $date ?><?= $time ?></p>
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
