@@ -105,15 +105,16 @@ ob_start();
         <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
 
         <?php
-        $pendingList = $pdo->query("SELECT id, created_at, job_start_time FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $pendingList = $pdo->query("SELECT id, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
         ?>
 
         <?php if (empty($pendingList)): ?>
             <p class="text-gray-500 text-sm">No pending orders.</p>
         <?php else: ?>
             <?php foreach ($pendingList as $o): 
+                $dateTime = date('d M h:i A', strtotime($o['created_at']));
                 $date = date('d M', strtotime($o['created_at']));
-                $time = $o['job_start_time'] ? date('h:i A', strtotime($o['job_start_time'])) : 'No time';
+                $time = date('h:i A', strtotime($o['created_at']));
             ?>
             <div class="mb-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <p class="text-xs text-indigo-600 font-semibold">New Order</p>
