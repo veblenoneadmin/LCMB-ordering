@@ -45,26 +45,20 @@ foreach ($dispatch as $row) {
 ob_start();
 ?>
 
-<!-- Google Material Icons -->
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
 <!-- Analytics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
         <h3 class="text-gray-500 font-medium text-sm">Total Orders</h3> 
         <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalOrders ?></p>
     </div>
-
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
         <h3 class="text-gray-500 font-medium text-sm">Installations</h3>
         <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalInstallations ?></p>
     </div>
-
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
         <h3 class="text-gray-500 font-medium text-sm">Clients</h3>
         <p class="text-2xl font-bold text-gray-800 mt-2"><?= $totalClients ?></p>
     </div>
-
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
         <h3 class="text-gray-500 font-medium text-sm">Pending Orders</h3>
         <p class="text-2xl font-bold text-gray-800 mt-2"><?= $pendingOrders ?></p>
@@ -85,6 +79,16 @@ ob_start();
                 <span class="material-icons" id="fsIcon">fullscreen</span>
                 <span id="fsText">Fullscreen</span>
             </button>
+        </div>
+
+        <!-- View dropdown -->
+        <div class="flex items-center gap-2 mb-2">
+            <label class="font-medium text-gray-700">View:</label>
+            <select id="calendarViewSelect" class="p-2 border rounded-lg text-sm">
+                <option value="dayGridMonth">Month</option>
+                <option value="timeGridWeek">Week</option>
+                <option value="listWeek">List</option>
+            </select>
         </div>
 
         <div class="mb-2">
@@ -112,16 +116,11 @@ ob_start();
             <p class="text-gray-500 text-sm">No pending orders.</p>
         <?php else: ?>
             <?php foreach ($pendingList as $o): 
-                $dateTime = date('d M h:i A', strtotime($o['created_at']));
-                $date = date('d M', strtotime($o['created_at']));
-                $time = date('h:i A', strtotime($o['created_at']));
+                $date = date('d M h:i A', strtotime($o['created_at']));
             ?>
-            <div class="mb-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <p class="text-xs text-indigo-600 font-semibold">New Order</p>
-                <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
-
+            <div class="mb-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer pending-order" data-order-id="<?= $o['id'] ?>">
+                <p class="text-lg font-bold text-gray-800">New #<?= $o['id'] ?></p>
                 <p class="text-sm text-gray-500"><?= $date ?></p>
-                <p class="text-xs text-gray-400"><?= $time ?></p>
             </div>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -129,7 +128,7 @@ ob_start();
 
 </div>
 
-<!-- Modal (Modern Centered) -->
+<!-- Dispatch Modal -->
 <div id="dispatchModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
     <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out" id="dispatchModalContent">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" id="modalTitle">Dispatch Details</h2>
@@ -144,22 +143,64 @@ ob_start();
     </div>
 </div>
 
+<!-- Pending Order Modal -->
+<div id="pendingOrderModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl w-96 max-w-full mx-2 transform scale-95 opacity-0 transition-all duration-300 ease-out">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" id="pendingModalTitle">Order Details</h2>
+        <div class="space-y-2 text-gray-700 dark:text-gray-300">
+            <p id="pendingCustomer" class="text-sm"></p>
+            <p id="pendingItems" class="text-sm"></p>
+            <p id="pendingTotal" class="text-sm"></p>
+        </div>
+        <div class="flex justify-end mt-6 gap-2">
+            <button id="approveOrderBtn" class="px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition">Approve</button>
+            <button id="cancelOrderBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
 
 <style>
-#dispatchModal.show #dispatchModalContent {
+/* Fade + Scale In Animation */
+#dispatchModal.show #dispatchModalContent,
+#pendingOrderModal.show div {
     transform: scale(1);
     opacity: 1;
 }
 
+/* Calendar container */
+#calendar {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Event style */
+.fc-event {
+    border: none;
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-weight: 500;
+    color: #fff !important;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease;
+}
+.fc-event:hover {
+    transform: scale(1.05);
+}
+
+/* Fullscreen */
 #calendar.fullscreen {
     position: fixed !important;
     top: 0;
     left: 0;
     width: 100vw !important;
     height: 100vh !important;
-    background: white;
+    background: #f4f6f8;
     z-index: 9999;
     padding: 20px;
     box-sizing: border-box;
@@ -178,12 +219,15 @@ document.addEventListener('DOMContentLoaded', function () {
         initialView: 'dayGridMonth',
         height: 650,
         headerToolbar: {
-            left: 'prev,next today',
+            left: 'prev',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,listWeek'
+            right: ''
         },
         events: allEvents,
         displayEventTime: false,
+        eventContent: function(arg) {
+            return { html: '<b>' + arg.event.extendedProps.personnel + '</b>' }; 
+        },
         eventClick: function(info) {
             const e = info.event.extendedProps;
             document.getElementById('modalTitle').innerText = info.event.title;
@@ -192,26 +236,20 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalHours').innerText = "Hours: " + e.hours;
             
             modal.classList.remove('hidden');
-            void modalContent.offsetWidth; 
+            void modalContent.offsetWidth;
             modal.classList.add('show');
         }
     });
 
     calendar.render();
 
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+    // Dropdown view
+    const viewSelect = document.getElementById('calendarViewSelect');
+    viewSelect.addEventListener('change', function() {
+        calendar.changeView(this.value);
     });
 
-    document.getElementById('personnelFilter').addEventListener('change', function() {
-        const val = this.value;
-        let filteredEvents = val === 'all' ? allEvents : allEvents.filter(ev => ev.extendedProps.personnel === val);
-        calendar.removeAllEvents();
-        calendar.addEventSource(filteredEvents);
-    });
-
-    // Fullscreen Toggle
+    // Fullscreen
     const btn = document.getElementById("fullscreenBtn");
     const fsIcon = document.getElementById("fsIcon");
     const fsText = document.getElementById("fsText");
@@ -219,7 +257,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     btn.addEventListener("click", () => {
         isFullscreen = !isFullscreen;
-
         if (isFullscreen) {
             calendarEl.classList.add("fullscreen");
             fsIcon.textContent = "fullscreen_exit";
@@ -229,8 +266,67 @@ document.addEventListener('DOMContentLoaded', function () {
             fsIcon.textContent = "fullscreen";
             fsText.textContent = "Fullscreen";
         }
-
         calendar.updateSize();
+    });
+
+    // Modal close
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    // Filter by personnel
+    document.getElementById('personnelFilter').addEventListener('change', function() {
+        const val = this.value;
+        let filteredEvents = val === 'all' ? allEvents : allEvents.filter(ev => ev.extendedProps.personnel === val);
+        calendar.removeAllEvents();
+        calendar.addEventSource(filteredEvents);
+    });
+
+    // Pending Orders Modal
+    const pendingOrders = document.querySelectorAll('.pending-order');
+    const pendingModal = document.getElementById('pendingOrderModal');
+    const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+    const approveOrderBtn = document.getElementById('approveOrderBtn');
+    let currentOrderId = null;
+
+    pendingOrders.forEach(el => {
+        el.addEventListener('click', () => {
+            currentOrderId = el.dataset.orderId;
+            fetch(`get_order_details.php?order_id=${currentOrderId}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('pendingModalTitle').innerText = "Order #" + currentOrderId;
+                    document.getElementById('pendingCustomer').innerText = "Customer: " + data.customer_name;
+                    document.getElementById('pendingItems').innerText = "Items Ordered: " + data.items_count;
+                    document.getElementById('pendingTotal').innerText = "Total: $" + data.total_amount;
+                    pendingModal.classList.remove('hidden');
+                    void pendingModal.offsetWidth;
+                    pendingModal.querySelector('div').classList.add('show');
+                });
+        });
+    });
+
+    cancelOrderBtn.addEventListener('click', () => {
+        pendingModal.classList.remove('show');
+        setTimeout(() => pendingModal.classList.add('hidden'), 300);
+    });
+
+    approveOrderBtn.addEventListener('click', () => {
+        if (!currentOrderId) return;
+        fetch('update_status.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `order_id=${currentOrderId}&status=approved`
+        }).then(res => res.json())
+        .then(resp => {
+            if (resp.success) {
+                alert("Order approved!");
+                location.reload();
+            } else {
+                alert("Failed to approve order.");
+            }
+        });
     });
 });
 </script>
