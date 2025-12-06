@@ -105,12 +105,7 @@ ob_start();
         <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
 
         <?php
-        $pendingList = $pdo->query(""
-            SELECT id, created_at, job_start_time 
-            FROM orders 
-            WHERE status='pending'
-            ORDER BY created_at DESC
-        ""\)->fetchAll(PDO::FETCH_ASSOC);
+        $pendingList = $pdo->query("SELECT id, created_at, job_start_time FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
         ?>
 
         <?php if (empty($pendingList)): ?>
