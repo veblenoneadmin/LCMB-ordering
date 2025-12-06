@@ -67,40 +67,32 @@ ob_start();
     </div>
 </div>
 
-<!-- Calendar + Pending Orders Panel -->
-<div class="flex gap-4 mb-6">
+<!-- Right Panel: Pending Orders -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-[500px] overflow-y-auto w-full max-w-[300px] ml-auto">
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
 
-    <!-- Left: Calendar -->
-    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 flex-1">
-        <div id="calendar" class="rounded-lg border border-gray-200 w-full h-[500px]"></div>
-    </div>
+    <?php
+    $pendingList = $pdo->query("SELECT * FROM orders WHERE status='pending' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    ?>
 
-    <!-- Right Panel: Pending Orders -->
-    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 w-[260px] overflow-y-auto">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
-
-        <?php
-        $pendingList = $pdo->query("SELECT id, customer_name, total, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+    <?php if (empty($pendingList)): ?>
+        <p class="text-gray-500 text-sm">No pending orders.</p>
+    <?php else: ?>
+        <?php foreach ($pendingList as $o): 
+            $date = date('d M', strtotime($o['created_at']));
+            $time = date('h:i A', strtotime($o['created_at']));
         ?>
-
-        <?php if (empty($pendingList)): ?>
-            <p class="text-gray-500 text-sm">No pending orders.</p>
-        <?php else: ?>
-            <?php foreach ($pendingList as $o): 
-                $date = date('d M', strtotime($o['created_at']));
-                $time = date('h:i A', strtotime($o['created_at']));
-            ?>
-            <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
-                 data-id="<?= $o['id'] ?>"
-                 data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
-                 data-total="<?= $o['total'] ?>">
-                <p class="text-lg font-bold text-gray-800">New Order #<?= $o['id'] ?></p>
-                <p class="text-sm text-gray-500"><?= $date ?> <?= $time ?></p>
-            </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
+        <div 
+            class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
+            data-id="<?= $o['id'] ?>"
+            data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
+            data-total="<?= number_format($o['total_amount'],2) ?>"
+        >
+            <p class="text-lg font-bold text-gray-800">New Order #<?= $o['id'] ?></p>
+            <p class="text-sm text-gray-500"><?= $date ?> <?= $time ?></p>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </div>
 
 
@@ -130,34 +122,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Pending order modal logic
     const pendingItems = document.querySelectorAll('.pending-item');
-    const pendingModal = document.getElementById('pendingModal');
-    const pmContent = document.getElementById('pendingModalContent');
-    const pmClose = document.getElementById('pmClose');
+const pendingModal = document.getElementById('pendingModal');
+const pmContent = document.getElementById('pendingModalContent');
+const pmClose = document.getElementById('pmClose');
+git commit 
+pendingItems.forEach(item => {
+    item.addEventListener('click', () => {
+        const orderId = item.getAttribute('data-id');
+        const customerName = item.getAttribute('data-customer');
+        const total = item.getAttribute('data-total');
 
-    pendingItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const orderId = item.getAttribute('data-id');
-            const customerName = item.getAttribute('data-customer');
-            const total = item.getAttribute('data-total');
+        document.getElementById('pmCustomer').innerText = 'Customer: ' + customerName;
+        document.getElementById('pmItems').innerText = 'Items: TBD';
+        document.getElementById('pmTotal').innerText = 'Total: ₱' + total;
+        document.getElementById('pmOrderId').value = orderId;
 
-            document.getElementById('pmCustomer').innerText = 'Customer: ' + customerName;
-            document.getElementById('pmItems').innerText = 'Items: TBD'; // you can calculate from order_items table if needed
-            document.getElementById('pmTotal').innerText = 'Total: ₱' + total;
-            document.getElementById('pmOrderId').value = orderId;
-
-            // Show modal
-            pendingModal.classList.remove('hidden');
-            void pmContent.offsetWidth; // trigger reflow for transition
-            pendingModal.classList.add('show');
-        });
-    });
-
-    // Close modal
-    pmClose.addEventListener('click', () => {
-        pendingModal.classList.remove('show');
-        setTimeout(() => pendingModal.classList.add('hidden'), 300);
+        pendingModal.classList.remove('hidden');
+        void pmContent.offsetWidth;
+        pendingModal.classList.add('show');
     });
 });
+
+pmClose.addEventListener('click', () => {
+    pendingModal.classList.remove('show');
+    setTimeout(() => pendingModal.classList.add('hidden'), 300);
+});
+
 </script>
 
 
