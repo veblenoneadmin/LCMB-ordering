@@ -68,69 +68,41 @@ ob_start();
 </div>
 
 <!-- Calendar + Pending Orders Panel -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+<div class="flex gap-4 mb-6">
 
     <!-- Left: Calendar -->
-    <div id="calendar" class="w-full h-[500px] border border-gray-200 rounded-lg"></div>
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 flex-1">
+        <div id="calendar" class="rounded-lg border border-gray-200 w-full h-[500px]"></div>
+    </div>
 
     <!-- Right Panel: Pending Orders -->
-<div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-fit overflow-y-auto">
-    <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 w-[260px] overflow-y-auto">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
 
-    <?php
-    $pendingList = $pdo->query("SELECT id, created_at, customer_name, total_amount FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
-    ?>
-
-    <?php if (empty($pendingList)): ?>
-        <p class="text-gray-500 text-sm">No pending orders.</p>
-    <?php else: ?>
-        <?php foreach ($pendingList as $o): 
-            $date = date('d M', strtotime($o['created_at']));
-            $time = date('h:i A', strtotime($o['created_at']));
+        <?php
+        $pendingList = $pdo->query("SELECT id, customer_name, total, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
         ?>
-        <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item" 
-             data-id="<?= $o['id'] ?>" 
-             data-customer="<?= htmlspecialchars($o['customer_name']) ?>" 
-             data-total="<?= $o['total_amount'] ?>">
-            <p class="text-lg font-bold text-gray-800">New Order #<?= $o['id'] ?></p>
-            <p class="text-sm text-gray-500"><?= $date ?> <?= $time ?></p>
-        </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
+
+        <?php if (empty($pendingList)): ?>
+            <p class="text-gray-500 text-sm">No pending orders.</p>
+        <?php else: ?>
+            <?php foreach ($pendingList as $o): 
+                $date = date('d M', strtotime($o['created_at']));
+                $time = date('h:i A', strtotime($o['created_at']));
+            ?>
+            <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
+                 data-id="<?= $o['id'] ?>"
+                 data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
+                 data-total="<?= $o['total'] ?>">
+                <p class="text-lg font-bold text-gray-800">New Order #<?= $o['id'] ?></p>
+                <p class="text-sm text-gray-500"><?= $date ?> <?= $time ?></p>
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
 </div>
-</div>
 
-
-<!-- Right Panel: Pending Orders -->
-<div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-fit overflow-y-auto max-w-xs ml-auto">
-    <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
-
-    <?php
-    $pendingList = $pdo->query("
-        SELECT id, created_at, customer_name, total_amount 
-        FROM orders 
-        WHERE status='pending' 
-        ORDER BY created_at DESC
-    ")->fetchAll(PDO::FETCH_ASSOC);
-    ?>
-
-    <?php if (empty($pendingList)): ?>
-        <p class="text-gray-500 text-sm">No pending orders.</p>
-    <?php else: ?>
-        <?php foreach ($pendingList as $o): 
-            $date = date('d M', strtotime($o['created_at']));
-            $time = date('h:i A', strtotime($o['created_at']));
-        ?>
-        <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
-             data-id="<?= $o['id'] ?>"
-             data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
-             data-total="<?= $o['total_amount'] ?>">
-            <p class="text-lg font-bold text-gray-800">New Order #<?= $o['id'] ?></p>
-            <p class="text-sm text-gray-500"><?= $date ?> <?= $time ?></p>
-        </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
 
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css">
