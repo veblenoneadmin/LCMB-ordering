@@ -45,6 +45,9 @@ foreach ($dispatch as $row) {
 ob_start();
 ?>
 
+<!-- Google Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
 <!-- Analytics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <div class="bg-white rounded-xl shadow p-5 flex flex-col">
@@ -68,19 +71,66 @@ ob_start();
     </div>
 </div>
 
-<!-- Dispatch Calendar -->
-<div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
-    <h2 class="text-xl font-semibold text-gray-700 mb-2">Dispatch Board</h2>
-    <div class="mb-2">
-        <label class="mr-2 font-medium">Filter by Personnel:</label>
-        <select id="personnelFilter" class="p-2 border rounded-lg text-sm">
-            <option value="all">All</option>
-            <?php foreach(array_unique(array_column($dispatch,'personnel_name')) as $person): ?>
-            <option value="<?= htmlspecialchars($person) ?>"><?= htmlspecialchars($person) ?></option>
-            <?php endforeach; ?>
-        </select>
+<!-- Calendar + Pending Orders Panel -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+
+    <!-- Left: Calendar -->
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-200 relative lg:col-span-2" id="calendarContainer">
+
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xl font-semibold text-gray-700">Dispatch Board</h2>
+
+            <!-- Fullscreen Button -->
+            <button id="fullscreenBtn" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm flex items-center gap-1 hover:bg-indigo-700 transition">
+                <span class="material-icons" id="fsIcon">fullscreen</span>
+                <span id="fsText">Fullscreen</span>
+            </button>
+        </div>
+
+        <div class="mb-2">
+            <label class="mr-2 font-medium">Filter by Personnel:</label>
+            <select id="personnelFilter" class="p-2 border rounded-lg text-sm">
+                <option value="all">All</option>
+                <?php foreach(array_unique(array_column($dispatch,'personnel_name')) as $person): ?>
+                <option value="<?= htmlspecialchars($person) ?>"><?= htmlspecialchars($person) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div id="calendar" class="rounded-lg border h-[500px]"></div>
     </div>
-    <div id="calendar" class="rounded-lg border"></div>
+
+    <!-- Right Panel: Pending Orders -->
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-200 h-[500px] overflow-y-auto">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
+
+        <?php
+        $pendingList = $pdo->query(""
+            SELECT id, created_at, job_start_time 
+            FROM orders 
+            WHERE status='pending'
+            ORDER BY created_at DESC
+        ""\)->fetchAll(PDO::FETCH_ASSOC);
+        ?>
+
+        <?php if (empty($pendingList)): ?>
+            <p class="text-gray-500 text-sm">No pending orders.</p>
+        <?php else: ?>
+            <?php foreach ($pendingList as $o): 
+                $date = date('d M', strtotime($o['created_at']));
+                $time = $o['job_start_time'] ? date('h:i A', strtotime($o['job_start_time'])) : 'No time';
+            ?>
+            <div class="mb-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                <p class="text-xs text-indigo-600 font-semibold">New Order</p>
+                <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
+
+                <p class="text-sm text-gray-500"><?= $date ?></p>
+                <p class="text-xs text-gray-400"><?= $time ?></p>
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
 </div>
 
 <!-- Modal (Modern Centered) -->
@@ -102,10 +152,21 @@ ob_start();
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
 
 <style>
-/* Fade + Scale In Animation */
 #dispatchModal.show #dispatchModalContent {
     transform: scale(1);
     opacity: 1;
+}
+
+#calendar.fullscreen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: white;
+    z-index: 9999;
+    padding: 20px;
+    box-sizing: border-box;
 }
 </style>
 
@@ -135,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalHours').innerText = "Hours: " + e.hours;
             
             modal.classList.remove('hidden');
-            void modalContent.offsetWidth; // trigger reflow
+            void modalContent.offsetWidth; 
             modal.classList.add('show');
         }
     });
@@ -152,6 +213,28 @@ document.addEventListener('DOMContentLoaded', function () {
         let filteredEvents = val === 'all' ? allEvents : allEvents.filter(ev => ev.extendedProps.personnel === val);
         calendar.removeAllEvents();
         calendar.addEventSource(filteredEvents);
+    });
+
+    // Fullscreen Toggle
+    const btn = document.getElementById("fullscreenBtn");
+    const fsIcon = document.getElementById("fsIcon");
+    const fsText = document.getElementById("fsText");
+    let isFullscreen = false;
+
+    btn.addEventListener("click", () => {
+        isFullscreen = !isFullscreen;
+
+        if (isFullscreen) {
+            calendarEl.classList.add("fullscreen");
+            fsIcon.textContent = "fullscreen_exit";
+            fsText.textContent = "Exit Fullscreen";
+        } else {
+            calendarEl.classList.remove("fullscreen");
+            fsIcon.textContent = "fullscreen";
+            fsText.textContent = "Fullscreen";
+        }
+
+        calendar.updateSize();
     });
 });
 </script>
