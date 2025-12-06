@@ -77,15 +77,7 @@ ob_start();
     <!-- Left: Calendar -->
     <div class="bg-white p-4 rounded-xl shadow border border-gray-100 relative col-span-1 pr-4" id="calendarContainer">
 
-        <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-semibold text-gray-700">Dispatch Board</h2>
-
-            <!-- Fullscreen Button -->
-            <button id="fullscreenBtn" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm flex items-center gap-1 hover:bg-indigo-700 transition">
-                <span class="material-icons" id="fsIcon">fullscreen</span>
-                <span id="fsText">Fullscreen</span>
-            </button>
-        </div>
+        
 
         
 
