@@ -108,7 +108,7 @@ ob_start();
                 $date = date('d M', strtotime($o['created_at']));
                 $time = date('h:i A', strtotime($o['created_at']));
             ?>
-            <div class="mb-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item" data-id="<?= $o['id'] ?>">
                 <p class="text-xs text-indigo-600 font-semibold">New Order</p>
                 <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
 
@@ -119,6 +119,25 @@ ob_start();
         <?php endif; ?>
     </div>
 
+</div>
+
+<!-- Pending Order Modal -->
+<div id="pendingModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl w-96 transform scale-95 opacity-0 transition-all duration-300" id="pendingModalContent">
+        <h2 class="text-xl font-bold text-gray-800 mb-3">Order Details</h2>
+        <div class="space-y-2 text-gray-700">
+            <p id="pmCustomer"></p>
+            <p id="pmItems"></p>
+            <p id="pmTotal"></p>
+        </div>
+        <div class="flex justify-between mt-6">
+            <form method="POST" action="update_status.php">
+                <input type="hidden" name="order_id" id="pmOrderId">
+                <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
+            </form>
+            <button id="pmClose" class="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400">Close</button>
+        </div>
+    </div>
 </div>
 
 <!-- Modal (Modern Centered) -->
@@ -190,6 +209,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     calendar.render();
+
+    // Pending order modal logic
+    const pendingItems = document.querySelectorAll('.pending-item');
+    const pendingModal = document.getElementById('pendingModal');
+    const pmContent = document.getElementById('pendingModalContent');
+    const pmClose = document.getElementById('pmClose');
+
+    pendingItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const orderId = item.getAttribute('data-id');
+
+            fetch('get_order_details.php?id=' + orderId)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('pmCustomer').innerText = 'Customer: ' + data.customer_name;
+                    document.getElementById('pmItems').innerText = 'Items: ' + data.items + ' item(s)';
+                    document.getElementById('pmTotal').innerText = 'Total: ₱' + data.total;
+                    document.getElementById('pmOrderId').value = orderId;
+
+                    pendingModal.classList.remove('hidden');
+                    void pmContent.offsetWidth;
+                    pendingModal.classList.add('show');
+                });
+        });
+    });
+
+    pmClose.addEventListener('click', () => {
+        pendingModal.classList.remove('show');
+        setTimeout(() => pendingModal.classList.add('hidden'), 300);
+    });();
 
     closeBtn.addEventListener('click', () => {
         modal.classList.remove('show');
