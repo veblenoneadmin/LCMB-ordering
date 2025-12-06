@@ -79,33 +79,35 @@ ob_start();
         <div id="calendar" class="rounded-lg border border-gray-200 w-full h-[500px]"></div>
     </div>
 
-    <!-- Right Panel: Pending Orders -->
-    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-[500px] overflow-y-auto ml-auto" style="max-width: 100%;">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
+   <!-- Right Panel: Pending Orders -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-[500px] overflow-y-auto ml-auto"
+     style="width: 260px;"> <!-- approximate width of one analytic card -->
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">Pending Orders</h2>
 
-        <?php
-        $pendingList = $pdo->query("SELECT id, customer_name, total_amount, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    <?php
+    $pendingList = $pdo->query("SELECT id, customer_name, total_amount, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    ?>
+
+    <?php if (empty($pendingList)): ?>
+        <p class="text-gray-500 text-sm">No pending orders.</p>
+    <?php else: ?>
+        <?php foreach ($pendingList as $o):
+            $date = date('d M', strtotime($o['created_at']));
+            $time = date('h:i A', strtotime($o['created_at']));
         ?>
+        <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
+             data-id="<?= $o['id'] ?>"
+             data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
+             data-total="<?= number_format($o['total_amount'],2) ?>">
+            <p class="text-xs text-indigo-600 font-semibold">New Order</p>
+            <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
+            <p class="text-sm text-gray-500"><?= $date ?></p>
+            <p class="text-xs text-gray-400"><?= $time ?></p>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
 
-        <?php if (empty($pendingList)): ?>
-            <p class="text-gray-500 text-sm">No pending orders.</p>
-        <?php else: ?>
-            <?php foreach ($pendingList as $o):
-                $date = date('d M', strtotime($o['created_at']));
-                $time = date('h:i A', strtotime($o['created_at']));
-            ?>
-            <div class="mb-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer pending-item"
-                 data-id="<?= $o['id'] ?>"
-                 data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
-                 data-total="<?= number_format($o['total_amount'],2) ?>">
-                <p class="text-xs text-indigo-600 font-semibold">New Order</p>
-                <p class="text-lg font-bold text-gray-800">#<?= $o['id'] ?></p>
-                <p class="text-sm text-gray-500"><?= $date ?></p>
-                <p class="text-xs text-gray-400"><?= $time ?></p>
-            </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
 
 </div>
 
