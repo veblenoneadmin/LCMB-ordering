@@ -13,7 +13,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <title><?= $titleEsc ?></title>
 
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@20..48,300,0,0" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@20..48,200,0,0" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -97,7 +97,7 @@ foreach($navItems as $item) {
 <!-- Installation Dropdown -->
 <div class="w-full">
     <button id="installToggleBtn" class="w-full flex items-center justify-between py-2 rounded-lg hover:bg-gray-100 transition">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1">
             <span class="material-symbols-sharp">construction</span>
             <p class="font-medium text-gray-500">Installation</p>
         </div>
