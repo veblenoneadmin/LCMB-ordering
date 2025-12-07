@@ -144,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description' => null
         ];
     }
+  }
 
     // Totals
     $subtotal = 0.0;
