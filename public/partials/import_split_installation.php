@@ -17,24 +17,24 @@ if (($handle = fopen($file_tmp, "r")) === false) die("Failed to open file.");
 fgetcsv($handle);
 
 $insert = $pdo->prepare("
-    INSERT INTO personnel (name, email, role, rate, category)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO split_installation (item_name, unit_price, quantity, category)
+    VALUES (?, ?, ?, ?)
 ");
 
 $count = 0;
 
 while (($row = fgetcsv($handle, 1000, ",")) !== false) {
-    if (count($row) < 5) continue;
+    if (count($row) < 4) continue;
 
-    [$name, $email, $role, $rate, $category] = array_map('trim', $row);
+    [$item_name, $unit_price, $quantity, $category] = array_map('trim', $row);
 
-    if ($name && $email && $role && $rate && $category) {
-        $insert->execute([$name, $email, $role, $rate, $category]);
+    if ($item_name && $unit_price && $quantity && $category) {
+        $insert->execute([$item_name, $unit_price, $quantity, $category]);
         $count++;
     }
 }
 
 fclose($handle);
-header("Location: ../personnel.php?imported=$count");
+header("Location: ../split_installation.php?imported=$count");
 exit;
 ?>
