@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-// Fetch orders
+// Fetch all orders
 $stmt = $pdo->query("
     SELECT 
         o.id,
@@ -17,35 +17,11 @@ $stmt = $pdo->query("
 
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Status list for filtering
-$status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
+// Status filter options
+$status_options = ['Pending', 'Approved', 'Completed'];
 ?>
 
 <?php ob_start(); ?>
-
-<style>
-/* Popup backdrop */
-#approvePopup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.55);
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-#approvePopup .popup-box {
-    background: white;
-    padding: 25px;
-    border-radius: 16px;
-    width: 350px;
-    text-align: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-}
-</style>
 
 <div class="p-6">
 
@@ -53,18 +29,22 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
 
     <!-- Search + Filter -->
     <div class="flex items-center gap-4 mb-4">
-        <input 
-            id="searchOrders" 
-            class="border px-4 py-2 rounded-xl w-80 shadow-sm"
-            placeholder="Search orders..."
-        >
 
-        <select id="filterStatus" class="border px-4 py-2 rounded-xl shadow-sm w-48">
+        <!-- SEARCH -->
+        <input id="searchOrders"
+               type="text"
+               class="border px-4 py-2 rounded-xl w-80 shadow-sm"
+               placeholder="Search orders...">
+
+        <!-- FILTER STATUS -->
+        <select id="filterStatus" 
+                class="border px-4 py-2 rounded-xl shadow-sm w-48">
             <option value="">All Status</option>
             <?php foreach ($status_options as $status): ?>
                 <option value="<?= $status ?>"><?= $status ?></option>
             <?php endforeach; ?>
         </select>
+
     </div>
 
     <!-- Orders Table -->
@@ -83,95 +63,127 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
             </thead>
 
             <tbody>
-                <?php foreach ($orders as $order): ?>
-                <tr 
-                    class="border-b hover:bg-gray-50 transition cursor-pointer order-row"
+
+            <?php foreach ($orders as $order): ?>
+                <tr class="border-b hover:bg-gray-50 transition cursor-pointer order-row"
                     data-id="<?= $order['id'] ?>"
-                    data-status="<?= $order['status'] ?>"
-                >
+                    data-status="<?= $order['status'] ?>">
+
                     <td class="py-2 px-2 font-medium text-gray-800">#<?= $order['id'] ?></td>
+
                     <td class="py-2 px-2"><?= htmlspecialchars($order['customer_name']) ?></td>
+
                     <td class="py-2 px-2"><?= htmlspecialchars($order['customer_email']) ?></td>
-                    <td class="py-2 px-2 font-semibold">$<?= number_format($order['total_amount'], 2) ?></td>
-                    <td class="py-2 px-2"><?= $order['status'] ?></td>
+
+                    <td class="py-2 px-2 font-semibold">
+                        $<?= number_format($order['total_amount'], 2) ?>
+                    </td>
+
+                    <td class="py-2 px-2 font-medium text-gray-700">
+                        <?= $order['status'] ?>
+                    </td>
+
                     <td class="py-2 px-2 text-gray-500 text-sm">
                         <?= date("M d, Y", strtotime($order['created_at'])) ?>
                     </td>
 
                     <td class="py-2 px-2 flex gap-2">
-
-                        <a href="review_order.php?order_id=<?= $order['id'] ?>" 
+                        <a href="review_order.php?order_id=<?= $order['id'] ?>"
                            class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">
-                           View
+                            View
                         </a>
 
-                        <a href="edit_order.php?order_id=<?= $order['id'] ?>" 
+                        <a href="edit_order.php?order_id=<?= $order['id'] ?>"
                            class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm shadow">
-                           Edit
+                            Edit
                         </a>
 
                         <a href="delete_order.php?order_id=<?= $order['id'] ?>"
                            onclick="return confirm('Are you sure you want to delete this order?');"
                            class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm shadow">
-                           Delete
+                            Delete
                         </a>
-
                     </td>
+
                 </tr>
-                <?php endforeach; ?>
+            <?php endforeach; ?>
+
             </tbody>
         </table>
     </div>
+
 </div>
 
-<!-- Pop-up Approve Modal -->
-<div id="approvePopup">
-    <div class="popup-box">
-        <h3 class="text-lg font-semibold mb-4">Approve Order?</h3>
+<!-- APPROVAL MODAL -->
+<div id="approveModal"
+     class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
 
-        <div class="flex justify-center gap-4">
-            <button id="cancelApprove" 
-                    class="px-4 py-2 bg-gray-300 rounded-lg shadow">
+    <div class="bg-white p-6 rounded-xl shadow-lg w-80">
+        <h2 class="text-lg font-semibold mb-3">Approve Order?</h2>
+
+        <p class="text-gray-600 mb-4">Do you want to approve this order?</p>
+
+        <div class="flex justify-end gap-3">
+            <button id="cancelApprove"
+                    class="px-4 py-2 bg-gray-300 rounded-lg">
                 Cancel
             </button>
 
-            <a id="approveBtn" 
-               class="px-4 py-2 bg-green-600 text-white rounded-lg shadow">
-               Approve
-            </a>
+            <button id="confirmApprove"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg">
+                Approve
+            </button>
         </div>
     </div>
 </div>
 
-<script>
-let popup = document.getElementById("approvePopup");
-let approveBtn = document.getElementById("approveBtn");
-let cancelBtn = document.getElementById("cancelApprove");
 
-// DOUBLE CLICK ROW = OPEN POPUP
+<script>
+let selectedOrderId = null;
+
+// DOUBLE CLICK → OPEN MODAL
 document.querySelectorAll(".order-row").forEach(row => {
-    row.addEventListener("dblclick", function() {
-        let id = this.dataset.id;
-        approveBtn.href = "approve_order.php?order_id=" + id;
-        popup.style.display = "flex";
+    row.addEventListener("dblclick", function () {
+        selectedOrderId = this.dataset.id;
+
+        document.getElementById("approveModal").classList.remove("hidden");
+        document.getElementById("approveModal").classList.add("flex");
     });
 });
 
-// CLOSE POPUP
-cancelBtn.onclick = () => popup.style.display = "none";
+// CANCEL BUTTON
+document.getElementById("cancelApprove").addEventListener("click", () => {
+    document.getElementById("approveModal").classList.add("hidden");
+});
 
-// SEARCH
+// APPROVE BUTTON → AJAX CALL
+document.getElementById("confirmApprove").addEventListener("click", () => {
+
+    fetch("update_status.php", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: `order_id=${selectedOrderId}&status=Approved`
+    })
+    .then(res => location.reload());
+});
+
+// SEARCH FUNCTION
 document.getElementById("searchOrders").addEventListener("keyup", function () {
     let filter = this.value.toLowerCase();
-    document.querySelectorAll("#ordersTable tbody tr").forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+    let rows = document.querySelectorAll("#ordersTable tbody tr");
+
+    rows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "" : "none";
     });
 });
 
 // STATUS FILTER
 document.getElementById("filterStatus").addEventListener("change", function () {
     let selected = this.value;
-    document.querySelectorAll("#ordersTable tbody tr").forEach(row => {
+    let rows = document.querySelectorAll("#ordersTable tbody tr");
+
+    rows.forEach(row => {
         let status = row.getAttribute("data-status");
         row.style.display = (selected === "" || status === selected) ? "" : "none";
     });
