@@ -67,7 +67,7 @@ $status_options = ['Pending', 'Approved', 'Completed'];
             <?php foreach ($orders as $order): ?>
                 <tr class="border-b hover:bg-gray-50 transition cursor-pointer order-row"
                     data-id="<?= $order['id'] ?>"
-                    data-status="<?= $order['status'] ?>">
+                    data-status="<?= htmlspecialchars($order['status']) ?>">
 
                     <td class="py-2 px-2 font-medium text-gray-800">#<?= $order['id'] ?></td>
 
@@ -137,7 +137,6 @@ $status_options = ['Pending', 'Approved', 'Completed'];
     </div>
 </div>
 
-
 <script>
 let selectedOrderId = null;
 
@@ -146,14 +145,17 @@ document.querySelectorAll(".order-row").forEach(row => {
     row.addEventListener("dblclick", function () {
         selectedOrderId = this.dataset.id;
 
-        document.getElementById("approveModal").classList.remove("hidden");
-        document.getElementById("approveModal").classList.add("flex");
+        const modal = document.getElementById("approveModal");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
     });
 });
 
 // CANCEL BUTTON
 document.getElementById("cancelApprove").addEventListener("click", () => {
-    document.getElementById("approveModal").classList.add("hidden");
+    const modal = document.getElementById("approveModal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
 });
 
 // APPROVE BUTTON → AJAX CALL
@@ -174,18 +176,18 @@ document.getElementById("searchOrders").addEventListener("keyup", function () {
 
     rows.forEach(row => {
         let text = row.innerText.toLowerCase();
-        row.style.display = text.includes(filter) ? "" : "none";
+        row.style.display = text.includes(filter) ? "table-row" : "none";
     });
 });
 
 // STATUS FILTER
 document.getElementById("filterStatus").addEventListener("change", function () {
-    let selected = this.value;
+    let selected = this.value.toLowerCase();
     let rows = document.querySelectorAll("#ordersTable tbody tr");
 
     rows.forEach(row => {
-        let status = row.getAttribute("data-status");
-        row.style.display = (selected === "" || status === selected) ? "" : "none";
+        let status = row.getAttribute("data-status").toLowerCase();
+        row.style.display = (selected === "" || status === selected) ? "table-row" : "none";
     });
 });
 </script>
