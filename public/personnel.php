@@ -193,7 +193,7 @@ document.getElementById("filterRole").addEventListener("change", function () {
 document.getElementById("addPersonnelForm").addEventListener("submit", e => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    fetch("partials/save_personnel.php", { method: "POST", body: formData })
+    fetch("partials/add_personnel.php", { method: "POST", body: formData })
         .then(res => res.json())
         .then(data => { if(data.success) location.reload(); else alert(data.message); });
 });
