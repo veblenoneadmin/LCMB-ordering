@@ -243,8 +243,9 @@ ob_start();
     <!-- Name -->
     <div class="relative">
       <input type="text" name="customer_name" id="customer_name" placeholder=" " 
-             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition" required>
-      <label for="customer_name" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition" required>
+      <label for="customer_name" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
         Name
       </label>
     </div>
@@ -252,8 +253,9 @@ ob_start();
     <!-- Email -->
     <div class="relative">
       <input type="email" name="customer_email" id="customer_email" placeholder=" " 
-             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
-      <label for="customer_email" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="customer_email" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
         Email
       </label>
     </div>
@@ -261,8 +263,9 @@ ob_start();
     <!-- Phone -->
     <div class="relative">
       <input type="text" name="contact_number" id="contact_number" placeholder=" " 
-             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
-      <label for="contact_number" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="contact_number" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
         Phone
       </label>
     </div>
@@ -270,8 +273,9 @@ ob_start();
     <!-- Address -->
     <div class="relative">
       <input type="text" name="job_address" id="job_address" placeholder=" " 
-             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
-      <label for="job_address" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="job_address" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
         Address
       </label>
     </div>
@@ -279,14 +283,16 @@ ob_start();
     <!-- Appointment Date -->
     <div class="relative">
       <input type="date" name="appointment_date" id="appointment_date" value="<?= date('Y-m-d') ?>" 
-             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
-      <label for="appointment_date" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="appointment_date" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
         Appointment Date
       </label>
     </div>
 
   </div>
 </div>
+
 
 
 <!-- PRODUCTS TABLE -->
