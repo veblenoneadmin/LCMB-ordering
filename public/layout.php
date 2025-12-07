@@ -107,7 +107,7 @@ foreach($navItems as $item) {
         <a href="ducted_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
             <span class="material-symbols-sharp text-gray-500 text-base">view_in_ar</span> Ducted Installation
         </a>
-        <a href="split_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+        <a href="split.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
             <span class="material-symbols-sharp text-gray-500 text-base">ac_unit</span> Split Installation
         </a>
     </div>
