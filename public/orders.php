@@ -25,7 +25,7 @@ $status_options = ['Pending', 'Approved', 'Completed'];
 
 <div class="p-6">
 
-    <h2 class="text-2xl font-semibold text-gray-800 mb-6">All Orders</h2>
+
 
     <!-- Search + Filter -->
     <div class="flex items-center gap-4 mb-4">
