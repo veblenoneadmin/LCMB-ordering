@@ -22,13 +22,16 @@ $roles = ['Technician', 'Installer', 'Assistant'];
     <div class="flex items-center gap-4 mb-4 justify-between">
 
         <div class="flex items-center gap-4">
-            <input id="searchPersonnel" type="text"
+            <!-- SEARCH -->
+            <input id="searchPersonnel"
+                   type="text"
                    class="border px-4 py-2 rounded-xl w-80 shadow-sm"
                    placeholder="Search personnel...">
 
+            <!-- ROLE FILTER -->
             <select id="filterRole" class="border px-4 py-2 rounded-xl shadow-sm w-48">
                 <option value="">All Roles</option>
-                <?php foreach($roles as $r): ?>
+                <?php foreach ($roles as $r): ?>
                     <option value="<?= $r ?>"><?= $r ?></option>
                 <?php endforeach; ?>
             </select>
@@ -56,23 +59,24 @@ $roles = ['Technician', 'Installer', 'Assistant'];
                 </tr>
             </thead>
             <tbody>
-                <?php foreach($personnel as $p): ?>
-                <tr class="border-b hover:bg-gray-50 transition" data-id="<?= $p['id'] ?>">
-                    <td class="py-2 px-2 font-medium text-gray-800"><?= $p['id'] ?></td>
-                    <td class="py-2 px-2"><?= htmlspecialchars($p['name']) ?></td>
-                    <td class="py-2 px-2"><?= htmlspecialchars($p['email']) ?></td>
-                    <td class="py-2 px-2"><?= htmlspecialchars($p['role']) ?></td>
-                    <td class="py-2 px-2 font-semibold">₱<?= number_format($p['rate'],2) ?></td>
-                    <td class="py-2 px-2"><?= htmlspecialchars($p['category']) ?></td>
-                    <td class="py-2 px-2 flex gap-2">
-                        <button class="edit-btn px-3 py-1 bg-green-600 text-white rounded-lg text-sm shadow">Edit</button>
-                        <button class="delete-btn px-3 py-1 bg-red-600 text-white rounded-lg text-sm shadow">Delete</button>
-                    </td>
-                </tr>
+                <?php foreach ($personnel as $p): ?>
+                    <tr class="border-b hover:bg-gray-50 transition" data-id="<?= $p['id'] ?>">
+                        <td class="py-2 px-2 font-medium text-gray-800">#<?= $p['id'] ?></td>
+                        <td class="py-2 px-2"><?= htmlspecialchars($p['name']) ?></td>
+                        <td class="py-2 px-2"><?= htmlspecialchars($p['email']) ?></td>
+                        <td class="py-2 px-2"><?= htmlspecialchars($p['role']) ?></td>
+                        <td class="py-2 px-2 font-semibold">₱<?= number_format($p['rate'],2) ?></td>
+                        <td class="py-2 px-2"><?= htmlspecialchars($p['category']) ?></td>
+                        <td class="py-2 px-2 flex gap-2">
+                            <button class="edit-btn px-3 py-1 bg-green-600 text-white rounded-lg text-sm shadow">Edit</button>
+                            <button class="delete-btn px-3 py-1 bg-red-600 text-white rounded-lg text-sm shadow">Delete</button>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
+
 </div>
 
 <!-- ADD MODAL -->
@@ -104,16 +108,15 @@ $roles = ['Technician', 'Installer', 'Assistant'];
         <h2 class="text-lg font-semibold mb-3">Edit Personnel</h2>
         <form id="editPersonnelForm">
             <input type="hidden" name="id">
-            <input type="text" name="name" placeholder="Full name" class="w-full mb-2 border p-2 rounded" required>
-            <input type="email" name="email" placeholder="Email" class="w-full mb-2 border p-2 rounded" required>
+            <input type="text" name="name" class="w-full mb-2 border p-2 rounded" placeholder="Full name" required>
+            <input type="email" name="email" class="w-full mb-2 border p-2 rounded" placeholder="Email" required>
             <select name="role" class="w-full mb-2 border p-2 rounded" required>
-                <option value="">Select Role</option>
                 <?php foreach($roles as $r): ?>
                     <option value="<?= $r ?>"><?= $r ?></option>
                 <?php endforeach; ?>
             </select>
-            <input type="number" step="0.01" name="rate" placeholder="Daily rate" class="w-full mb-2 border p-2 rounded" required>
-            <input type="text" name="category" placeholder="Category" class="w-full mb-4 border p-2 rounded" required>
+            <input type="number" step="0.01" name="rate" class="w-full mb-2 border p-2 rounded" placeholder="Daily rate" required>
+            <input type="text" name="category" class="w-full mb-4 border p-2 rounded" placeholder="Category" required>
             <div class="flex justify-end gap-2">
                 <button type="button" id="cancelEdit" class="px-4 py-2 bg-gray-300 rounded-lg">Cancel</button>
                 <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Update</button>
@@ -137,79 +140,87 @@ $roles = ['Technician', 'Installer', 'Assistant'];
 </div>
 
 <script>
-// Open/Close Add Modal
-document.getElementById("openAddModal").onclick = () => { document.getElementById("addModal").classList.remove("hidden"); document.getElementById("addModal").classList.add("flex"); }
-document.getElementById("cancelAdd").onclick = () => { document.getElementById("addModal").classList.add("hidden"); }
+// OPEN/CLOSE MODALS
+document.getElementById("openAddModal").onclick = () => { 
+    document.getElementById("addModal").classList.remove("hidden"); 
+    document.getElementById("addModal").classList.add("flex"); 
+};
+document.getElementById("cancelAdd").onclick = () => { 
+    document.getElementById("addModal").classList.add("hidden"); 
+};
+document.getElementById("openImportModal").onclick = () => { 
+    document.getElementById("importModal").classList.remove("hidden"); 
+    document.getElementById("importModal").classList.add("flex"); 
+};
+document.getElementById("cancelImport").onclick = () => { 
+    document.getElementById("importModal").classList.add("hidden"); 
+};
+document.getElementById("cancelEdit").onclick = () => { 
+    document.getElementById("editModal").classList.add("hidden"); 
+};
 
-// Open/Close Import Modal
-document.getElementById("openImportModal").onclick = () => { document.getElementById("importModal").classList.remove("hidden"); document.getElementById("importModal").classList.add("flex"); }
-document.getElementById("cancelImport").onclick = () => { document.getElementById("importModal").classList.add("hidden"); }
-
-// Add Personnel AJAX
+// ADD PERSONNEL AJAX
 document.getElementById("addPersonnelForm").addEventListener("submit", e => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    fetch("partials/add_personnel.php", { method:"POST", body:formData })
+    fetch("partials/add_personnel.php", { method: "POST", body: formData })
         .then(res => res.json())
         .then(data => { if(data.success) location.reload(); else alert(data.message); });
 });
 
-// Edit button click
+// EDIT BUTTON - fill modal
 document.querySelectorAll(".edit-btn").forEach(btn => {
     btn.onclick = () => {
         const row = btn.closest("tr");
-        const form = document.getElementById("editPersonnelForm");
-        form.id.value = row.dataset.id;
-        form.name.value = row.children[1].innerText;
-        form.email.value = row.children[2].innerText;
-        form.role.value = row.children[3].innerText;
-        form.rate.value = parseFloat(row.children[4].innerText.replace('₱',''));
-        form.category.value = row.children[5].innerText;
+        const inputs = document.querySelectorAll("#editPersonnelForm [name]");
+        inputs[0].value = row.dataset.id;
+        inputs[1].value = row.children[1].innerText;
+        inputs[2].value = row.children[2].innerText;
+        inputs[3].value = row.children[3].innerText;
+        inputs[4].value = parseFloat(row.children[4].innerText.replace('₱',''));
+        inputs[5].value = row.children[5].innerText;
         document.getElementById("editModal").classList.remove("hidden");
         document.getElementById("editModal").classList.add("flex");
     };
 });
 
-// Update Personnel AJAX
+// UPDATE PERSONNEL AJAX
 document.getElementById("editPersonnelForm").addEventListener("submit", e => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    fetch("partials/update_personnel.php",{ method:"POST", body:formData })
-        .then(res=>res.json())
-        .then(data=>{ if(data.success) location.reload(); else alert(data.message); });
+    fetch("partials/update_personnel.php", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => { if(data.success) location.reload(); else alert(data.message); });
 });
 
-// Cancel Edit Modal
-document.getElementById("cancelEdit").onclick = () => { document.getElementById("editModal").classList.add("hidden"); }
-
-// Delete Personnel AJAX
-document.querySelectorAll(".delete-btn").forEach(btn=>{
+// DELETE PERSONNEL AJAX
+document.querySelectorAll(".delete-btn").forEach(btn => {
     btn.onclick = () => {
-        const id = btn.closest("tr").dataset.id;
+        const row = btn.closest("tr");
+        const id = row.dataset.id;
         if(confirm("Are you sure you want to delete this personnel?")){
-            fetch("partials/delete_personnel.php",{
+            fetch("partials/delete_personnel.php", {
                 method:"POST",
                 headers:{"Content-Type":"application/x-www-form-urlencoded"},
                 body:`id=${id}`
-            }).then(()=>location.reload());
+            }).then(()=> location.reload());
         }
-    }
+    };
 });
 
-// Live Search
+// SEARCH & FILTER
 document.getElementById("searchPersonnel").addEventListener("keyup", function(){
     const filter = this.value.toLowerCase();
     document.querySelectorAll("#personnelTable tbody tr").forEach(row=>{
-        row.style.display = row.innerText.toLowerCase().includes(filter) ? "table-row" : "none";
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "table-row" : "none";
     });
 });
-
-// Filter by Role
 document.getElementById("filterRole").addEventListener("change", function(){
-    const val = this.value;
+    const selected = this.value;
     document.querySelectorAll("#personnelTable tbody tr").forEach(row=>{
         const role = row.children[3].innerText;
-        row.style.display = (val==="" || role===val) ? "table-row" : "none";
+        row.style.display = (selected === "" || role === selected) ? "table-row" : "none";
     });
 });
 </script>
