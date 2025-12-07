@@ -2,120 +2,182 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-$search = $_GET['search'] ?? '';
-$statusFilter = $_GET['status'] ?? '';
+// Fetch orders
+$stmt = $pdo->query("
+    SELECT 
+        o.id,
+        o.customer_name,
+        o.customer_email,
+        o.total_amount,
+        o.status,
+        o.created_at
+    FROM orders o
+    ORDER BY o.created_at DESC
+");
 
-$query = "SELECT * FROM orders WHERE 1";
-$params = [];
-
-if ($search !== '') {
-    $query .= " AND (customer_name LIKE ? OR customer_email LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-}
-
-if ($statusFilter !== '') {
-    $query .= " AND status = ?";
-    $params[] = $statusFilter;
-}
-
-$query .= " ORDER BY id DESC";
-
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-ob_start();
+// Status list for filtering
+$status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
 ?>
 
+<?php ob_start(); ?>
+
+<style>
+/* Popup backdrop */
+#approvePopup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+#approvePopup .popup-box {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+</style>
+
 <div class="p-6">
-    <h1 class="text-2xl font-semibold mb-4">Orders</h1>
 
-    <form class="mb-4 flex gap-3">
-        <input type="text" name="search" placeholder="Search name or email..." value="<?= htmlspecialchars($search) ?>" class="p-2 border rounded-lg w-64">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6">All Orders</h2>
 
-        <select name="status" class="p-2 border rounded-lg">
+    <!-- Search + Filter -->
+    <div class="flex items-center gap-4 mb-4">
+        <input 
+            id="searchOrders" 
+            class="border px-4 py-2 rounded-xl w-80 shadow-sm"
+            placeholder="Search orders..."
+        >
+
+        <select id="filterStatus" class="border px-4 py-2 rounded-xl shadow-sm w-48">
             <option value="">All Status</option>
-            <option value="Pending" <?= $statusFilter=="Pending"?"selected":"" ?>>Pending</option>
-            <option value="Approved" <?= $statusFilter=="Approved"?"selected":"" ?>>Approved</option>
-            <option value="Completed" <?= $statusFilter=="Completed"?"selected":"" ?>>Completed</option>
+            <?php foreach ($status_options as $status): ?>
+                <option value="<?= $status ?>"><?= $status ?></option>
+            <?php endforeach; ?>
         </select>
+    </div>
 
-        <button class="bg-blue-600 text-white px-4 rounded-lg">Apply</button>
-    </form>
-
-    <div class="overflow-auto border rounded-xl">
-        <table class="min-w-full text-sm">
-            <thead class="bg-gray-100 text-gray-700">
-                <tr>
-                    <th class="p-3 text-left">ID</th>
-                    <th class="p-3 text-left">Customer</th>
-                    <th class="p-3 text-left">Email</th>
-                    <th class="p-3 text-left">Amount</th>
-                    <th class="p-3 text-left">Status</th>
-                    <th class="p-3 text-left">Actions</th>
+    <!-- Orders Table -->
+    <div class="bg-white rounded-2xl shadow p-4 border border-gray-200 overflow-x-auto">
+        <table class="w-full border-collapse" id="ordersTable">
+            <thead>
+                <tr class="border-b text-left text-gray-700">
+                    <th class="py-2 px-2">Order ID</th>
+                    <th class="py-2 px-2">Customer</th>
+                    <th class="py-2 px-2">Email</th>
+                    <th class="py-2 px-2">Total</th>
+                    <th class="py-2 px-2">Status</th>
+                    <th class="py-2 px-2">Created</th>
+                    <th class="py-2 px-2 w-40">Actions</th>
                 </tr>
             </thead>
+
             <tbody>
-            <?php foreach ($orders as $o): ?>
-                <tr class="border-b hover:bg-gray-50 cursor-pointer order-row" data-id="<?= $o['id'] ?>">
-                    <td class="p-3"><?= $o['id'] ?></td>
-                    <td class="p-3"><?= htmlspecialchars($o['customer_name']) ?></td>
-                    <td class="p-3"><?= htmlspecialchars($o['customer_email']) ?></td>
-                    <td class="p-3">₱<?= number_format($o['total_amount'], 2) ?></td>
-                    <td class="p-3 font-semibold"><?= htmlspecialchars($o['status']) ?></td>
-                    <td class="p-3 flex gap-2">
-                        <a href="edit_order.php?id=<?= $o['id'] ?>" onclick="event.stopPropagation();" class="bg-green-600 text-white px-3 py-1 rounded-lg">Edit</a>
-                        <a href="delete_order.php?id=<?= $o['id'] ?>" onclick="event.stopPropagation(); return confirm('Delete order?');" class="bg-red-600 text-white px-3 py-1 rounded-lg">Delete</a>
+                <?php foreach ($orders as $order): ?>
+                <tr 
+                    class="border-b hover:bg-gray-50 transition cursor-pointer order-row"
+                    data-id="<?= $order['id'] ?>"
+                    data-status="<?= $order['status'] ?>"
+                >
+                    <td class="py-2 px-2 font-medium text-gray-800">#<?= $order['id'] ?></td>
+                    <td class="py-2 px-2"><?= htmlspecialchars($order['customer_name']) ?></td>
+                    <td class="py-2 px-2"><?= htmlspecialchars($order['customer_email']) ?></td>
+                    <td class="py-2 px-2 font-semibold">$<?= number_format($order['total_amount'], 2) ?></td>
+                    <td class="py-2 px-2"><?= $order['status'] ?></td>
+                    <td class="py-2 px-2 text-gray-500 text-sm">
+                        <?= date("M d, Y", strtotime($order['created_at'])) ?>
+                    </td>
+
+                    <td class="py-2 px-2 flex gap-2">
+
+                        <a href="review_order.php?order_id=<?= $order['id'] ?>" 
+                           class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">
+                           View
+                        </a>
+
+                        <a href="edit_order.php?order_id=<?= $order['id'] ?>" 
+                           class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm shadow">
+                           Edit
+                        </a>
+
+                        <a href="delete_order.php?order_id=<?= $order['id'] ?>"
+                           onclick="return confirm('Are you sure you want to delete this order?');"
+                           class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm shadow">
+                           Delete
+                        </a>
+
                     </td>
                 </tr>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>
 </div>
 
-<div id="approvePopup" class="fixed inset-0 hidden bg-black bg-opacity-50 items-center justify-center">
-    <div class="bg-white p-6 rounded-xl shadow-lg w-80 text-center">
-        <h3 class="text-lg font-semibold mb-4">Approve this order?</h3>
-        <div class="flex justify-center gap-3 mt-4">
-            <button id="approveBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Approve</button>
-            <button id="cancelBtn" class="bg-gray-300 px-4 py-2 rounded-lg">Cancel</button>
+<!-- Pop-up Approve Modal -->
+<div id="approvePopup">
+    <div class="popup-box">
+        <h3 class="text-lg font-semibold mb-4">Approve Order?</h3>
+
+        <div class="flex justify-center gap-4">
+            <button id="cancelApprove" 
+                    class="px-4 py-2 bg-gray-300 rounded-lg shadow">
+                Cancel
+            </button>
+
+            <a id="approveBtn" 
+               class="px-4 py-2 bg-green-600 text-white rounded-lg shadow">
+               Approve
+            </a>
         </div>
     </div>
 </div>
 
 <script>
-let selectedOrderId = null;
+let popup = document.getElementById("approvePopup");
+let approveBtn = document.getElementById("approveBtn");
+let cancelBtn = document.getElementById("cancelApprove");
 
+// DOUBLE CLICK ROW = OPEN POPUP
 document.querySelectorAll(".order-row").forEach(row => {
-    row.addEventListener("dblclick", () => {
-        selectedOrderId = row.dataset.id;
-        document.getElementById("approvePopup").classList.remove("hidden");
+    row.addEventListener("dblclick", function() {
+        let id = this.dataset.id;
+        approveBtn.href = "approve_order.php?order_id=" + id;
+        popup.style.display = "flex";
     });
 });
 
-document.getElementById("cancelBtn").onclick = () => {
-    document.getElementById("approvePopup").classList.add("hidden");
-};
+// CLOSE POPUP
+cancelBtn.onclick = () => popup.style.display = "none";
 
-document.getElementById("approveBtn").onclick = () => {
-    fetch("update_status.php", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ order_id: selectedOrderId, new_status: "Approved" })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert("Failed to approve order.");
-        }
+// SEARCH
+document.getElementById("searchOrders").addEventListener("keyup", function () {
+    let filter = this.value.toLowerCase();
+    document.querySelectorAll("#ordersTable tbody tr").forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
     });
-};
+});
+
+// STATUS FILTER
+document.getElementById("filterStatus").addEventListener("change", function () {
+    let selected = this.value;
+    document.querySelectorAll("#ordersTable tbody tr").forEach(row => {
+        let status = row.getAttribute("data-status");
+        row.style.display = (selected === "" || status === selected) ? "" : "none";
+    });
+});
 </script>
 
 <?php
-$content = ob_get_clean();
-renderLayout($content, "Orders");
+renderLayout("All Orders", ob_get_clean(), "orders");
+?>
