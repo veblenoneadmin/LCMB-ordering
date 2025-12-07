@@ -238,29 +238,56 @@ ob_start();
 <!-- CLIENT INFO -->
 <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
   <h5 class="text-lg font-medium text-gray-700 mb-4">Client Information</h5>
-  <div class="grid grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- Name -->
     <div class="relative">
-      <input type="text" name="customer_name" id="customer_name" placeholder=" " class="material-input" required>
-      <label for="customer_name">Name</label>
+      <input type="text" name="customer_name" id="customer_name" placeholder=" " 
+             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition" required>
+      <label for="customer_name" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+        Name
+      </label>
     </div>
+
+    <!-- Email -->
     <div class="relative">
-      <input type="email" name="customer_email" id="customer_email" placeholder=" " class="material-input">
-      <label for="customer_email">Email</label>
+      <input type="email" name="customer_email" id="customer_email" placeholder=" " 
+             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
+      <label for="customer_email" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+        Email
+      </label>
     </div>
+
+    <!-- Phone -->
     <div class="relative">
-      <input type="text" name="contact_number" id="contact_number" placeholder=" " class="material-input">
-      <label for="contact_number">Phone</label>
+      <input type="text" name="contact_number" id="contact_number" placeholder=" " 
+             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
+      <label for="contact_number" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+        Phone
+      </label>
     </div>
+
+    <!-- Address -->
     <div class="relative">
-      <input type="text" name="job_address" id="job_address" placeholder=" " class="material-input">
-      <label for="job_address">Address</label>
+      <input type="text" name="job_address" id="job_address" placeholder=" " 
+             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
+      <label for="job_address" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+        Address
+      </label>
     </div>
+
+    <!-- Appointment Date -->
     <div class="relative">
-      <input type="date" name="appointment_date" id="appointment_date" value="<?= date('Y-m-d') ?>" class="material-input">
-      <label for="appointment_date">Appointment Date</label>
+      <input type="date" name="appointment_date" id="appointment_date" value="<?= date('Y-m-d') ?>" 
+             class="peer h-12 w-full border-b-2 border-gray-300 text-gray-900 placeholder-transparent focus:border-blue-500 focus:outline-none transition">
+      <label for="appointment_date" class="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:-top-3.5 peer-focus:text-gray-700 peer-focus:text-sm">
+        Appointment Date
+      </label>
     </div>
+
   </div>
 </div>
+
 
 <!-- PRODUCTS TABLE -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
