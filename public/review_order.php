@@ -101,10 +101,19 @@ ob_start();
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
   <div class="lg:col-span-2 space-y-6">
-    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-      <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
-      <p class="text-gray-500 text-sm mt-1">Verify all order details before sending.</p>
-    </div>
+    <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 flex items-center justify-between">
+  <div>
+    <h2 class="text-2xl font-semibold text-gray-800">Review Order #<?= htmlspecialchars($order_id) ?></h2>
+    <p class="text-gray-500 text-sm mt-1">Verify all order details before sending.</p>
+  </div>
+  <div>
+    <a href="edit_order.php?order_id=<?= $order_id ?>" 
+       class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-xl font-medium transition shadow">
+       Edit Order
+    </a>
+  </div>
+</div>
+
 
     <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
       <h3 class="text-lg font-semibold mb-4 text-gray-700">Client Information</h3>
