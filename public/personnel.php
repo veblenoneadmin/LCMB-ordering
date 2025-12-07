@@ -38,7 +38,7 @@ $roles = ['Technician', 'Installer', 'Assistant'];
         <!-- RIGHT SIDE BUTTONS -->
         <div class="ml-auto flex gap-3">
             <button id="openAddModal" class="px-4 py-2 bg-blue-600 text-white rounded-xl shadow">Add</button>
-            <button id="openImportModal" class="px-4 py-2 bg-green-600 text-white rounded-xl shadow">Import</button>
+            <button id="openImportModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg shadow">Import</button>
         </div>
 
     </div>
@@ -152,96 +152,103 @@ $roles = ['Technician', 'Installer', 'Assistant'];
 </div>
 
 <script>
-// OPEN/CLOSE MODALS
-document.getElementById("openAddModal").onclick = () => document.getElementById("addModal").classList.replace("hidden", "flex");
-document.getElementById("cancelAdd").onclick = () => document.getElementById("addModal").classList.replace("flex", "hidden");
+document.addEventListener("DOMContentLoaded", function() {
 
-document.querySelectorAll(".editBtn").forEach(btn => {
-    btn.onclick = () => {
-        document.getElementById("edit_id").value = btn.dataset.id;
-        document.getElementById("edit_name").value = btn.dataset.name;
-        document.getElementById("edit_email").value = btn.dataset.email;
-        document.getElementById("edit_role").value = btn.dataset.role;
-        document.getElementById("edit_rate").value = btn.dataset.rate;
-        document.getElementById("edit_category").value = btn.dataset.category;
-        document.getElementById("editModal").classList.replace("hidden", "flex");
-    };
-});
-document.getElementById("cancelEdit").onclick = () => document.getElementById("editModal").classList.replace("flex", "hidden");
+    // OPEN/CLOSE MODALS
+    const addModal = document.getElementById("addModal");
+    const editModal = document.getElementById("editModal");
+    const importModal = document.getElementById("importModal");
 
-document.getElementById("openImportModal").onclick = () => document.getElementById("importModal").classList.replace("hidden", "flex");
-document.getElementById("cancelImport").onclick = () => document.getElementById("importModal").classList.replace("flex", "hidden");
+    document.getElementById("openAddModal").onclick = () => addModal.classList.replace("hidden", "flex");
+    document.getElementById("cancelAdd").onclick = () => addModal.classList.replace("flex", "hidden");
 
-// SEARCH
-document.getElementById("searchPersonnel").addEventListener("keyup", function () {
-    let filter = this.value.toLowerCase();
-    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+    document.getElementById("openImportModal").onclick = () => importModal.classList.replace("hidden", "flex");
+    document.getElementById("cancelImport").onclick = () => importModal.classList.replace("flex", "hidden");
+
+    document.getElementById("cancelEdit").onclick = () => editModal.classList.replace("flex", "hidden");
+
+    // EDIT BUTTONS
+    document.querySelectorAll(".editBtn").forEach(btn => {
+        btn.onclick = () => {
+            document.getElementById("edit_id").value = btn.dataset.id;
+            document.getElementById("edit_name").value = btn.dataset.name;
+            document.getElementById("edit_email").value = btn.dataset.email;
+            document.getElementById("edit_role").value = btn.dataset.role;
+            document.getElementById("edit_rate").value = btn.dataset.rate;
+            document.getElementById("edit_category").value = btn.dataset.category;
+            editModal.classList.replace("hidden", "flex");
+        };
     });
-});
 
-// FILTER ROLE
-document.getElementById("filterRole").addEventListener("change", function () {
-    let selected = this.value;
-    document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
-        let role = row.children[3].innerText.trim();
-        row.style.display = (selected === "" || role === selected) ? "" : "none";
+    // SEARCH
+    document.getElementById("searchPersonnel").addEventListener("keyup", function () {
+        let filter = this.value.toLowerCase();
+        document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+        });
     });
-});
 
-// ADD PERSONNEL AJAX
-document.getElementById("addPersonnelForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    fetch("partials/add_personnel.php", { method: "POST", body: formData })
-        .then(res => res.json())
-        .then(data => { if(data.success) location.reload(); else alert(data.message); });
-});
+    // FILTER ROLE
+    document.getElementById("filterRole").addEventListener("change", function () {
+        let selected = this.value;
+        document.querySelectorAll("#personnelTable tbody tr").forEach(row => {
+            let role = row.children[3].innerText.trim();
+            row.style.display = (selected === "" || role === selected) ? "" : "none";
+        });
+    });
 
-// EDIT PERSONNEL AJAX
-document.getElementById("editPersonnelForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    fetch("partials/update_personnel.php", { method: "POST", body: formData })
-        .then(res => res.json())
-        .then(data => { if(data.success) location.reload(); else alert(data.message); });
-});
+    // ADD PERSONNEL AJAX
+    document.getElementById("addPersonnelForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        fetch("partials/add_personnel.php", { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => { if(data.success) location.reload(); else alert(data.message); })
+            .catch(err => alert("Error: " + err));
+    });
 
-// IMPORT PERSONNEL AJAX
-document.getElementById("importPersonnelForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+    // EDIT PERSONNEL AJAX
+    document.getElementById("editPersonnelForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        fetch("partials/update_personnel.php", { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => { if(data.success) location.reload(); else alert(data.message); })
+            .catch(err => alert("Error: " + err));
+    });
 
-    fetch("partials/import_personnel.php", {
-        method: "POST",
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert("Personnel imported successfully!");
-            location.reload();
-        } else {
-            alert(data.message || "Import failed!");
+    // IMPORT PERSONNEL AJAX
+    document.getElementById("importPersonnelForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        fetch("partials/import_personnel.php", { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){ alert("Personnel imported successfully!"); location.reload(); }
+                else alert(data.message || "Import failed!");
+            })
+            .catch(err => alert("An error occurred: " + err));
+    });
+
+    // DELETE PERSONNEL AJAX - event delegation
+    document.getElementById("personnelTable").addEventListener("click", function(e){
+        if(e.target.closest(".deleteBtn")){
+            const btn = e.target.closest(".deleteBtn");
+            const id = btn.dataset.id;
+            if(confirm("Are you sure you want to delete this personnel?")){
+                fetch("partials/delete_personnel.php", {
+                    method: "POST",
+                    headers: {"Content-Type":"application/x-www-form-urlencoded"},
+                    body: `id=${id}`
+                }).then(() => location.reload())
+                .catch(err => alert("Delete failed: " + err));
+            }
         }
-    })
-    .catch(err => alert("An error occurred: " + err));
-});
+    });
 
-// DELETE PERSONNEL AJAX
-document.querySelectorAll(".deleteBtn").forEach(btn => {
-    btn.onclick = () => {
-        const id = btn.dataset.id;
-        if(confirm("Are you sure you want to delete this personnel?")){
-            fetch("partials/delete_personnel.php", {
-                method: "POST",
-                headers: {"Content-Type":"application/x-www-form-urlencoded"},
-                body: `id=${id}`
-            }).then(() => location.reload());
-        }
-    };
 });
 </script>
+
 
 <?php
 renderLayout("Personnel", ob_get_clean(), "personnel");
