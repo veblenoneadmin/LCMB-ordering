@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
 // Fetch all orders
-$query = $pdo->query("
+$stmt = $pdo->query("
     SELECT 
         o.id,
         o.customer_name,
@@ -16,10 +16,11 @@ $query = $pdo->query("
     ORDER BY o.created_at DESC
 ");
 
-$orders = $query->fetchAll(PDO::FETCH_ASSOC);
+$orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Status options
 $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
+
 ?>
 
 <?php ob_start(); ?>
@@ -28,15 +29,28 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
 
     <h2 class="text-2xl font-semibold text-gray-800 mb-6">All Orders</h2>
 
-    <!-- SEARCH BAR -->
-    <div class="mb-4 flex justify-between items-center">
-        <input id="searchOrders" type="text" 
-               class="border px-4 py-2 rounded-xl w-72 shadow-sm" 
+    <!-- Search + Filter Row -->
+    <div class="flex items-center gap-4 mb-4">
+
+        <!-- SEARCH -->
+        <input id="searchOrders" 
+               type="text" 
+               class="border px-4 py-2 rounded-xl w-80 shadow-sm"
                placeholder="Search orders...">
+
+        <!-- FILTER STATUS -->
+        <select id="filterStatus" 
+                class="border px-4 py-2 rounded-xl shadow-sm w-48">
+            <option value="">All Status</option>
+            <?php foreach ($status_options as $status): ?>
+                <option value="<?= $status ?>"><?= $status ?></option>
+            <?php endforeach; ?>
+        </select>
+
     </div>
 
-    <!-- ORDERS TABLE -->
-    <div class="bg-white rounded-2xl shadow p-4 border border-gray-200">
+    <!-- Orders Table -->
+    <div class="bg-white rounded-2xl shadow p-4 border border-gray-200 overflow-x-auto">
         <table class="w-full border-collapse" id="ordersTable">
             <thead>
                 <tr class="border-b text-left text-gray-700">
@@ -50,10 +64,11 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
                     <th class="py-2 px-2 w-40">Actions</th>
                 </tr>
             </thead>
+
             <tbody>
 
             <?php foreach ($orders as $order): ?>
-                <tr class="border-b hover:bg-gray-50 transition">
+                <tr class="border-b hover:bg-gray-50 transition" data-status="<?= $order['status'] ?>">
 
                     <td class="py-2 px-2 font-medium text-gray-800">
                         #<?= $order['id'] ?>
@@ -73,7 +88,8 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
                         <form method="post" action="update_status.php">
                             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
 
-                            <select name="status" class="border rounded-lg px-2 py-1 text-sm"
+                            <select name="status" 
+                                    class="border rounded-lg px-2 py-1 text-sm"
                                     onchange="this.form.submit()">
                                 <?php foreach ($status_options as $status): ?>
                                     <option value="<?= $status ?>"
@@ -89,7 +105,8 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
                         <?= date("M d, Y", strtotime($order['created_at'])) ?>
                     </td>
 
-                    <td class="py-2 px-2 space-x-2">
+                    <td class="py-2 px-2 flex gap-2">
+
                         <a href="review_order.php?order_id=<?= $order['id'] ?>"
                            class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">
                             View
@@ -105,6 +122,7 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
                            class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm shadow">
                             Delete
                         </a>
+
                     </td>
 
                 </tr>
@@ -113,6 +131,7 @@ $status_options = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
             </tbody>
         </table>
     </div>
+
 </div>
 
 <script>
@@ -126,9 +145,19 @@ document.getElementById("searchOrders").addEventListener("keyup", function () {
         row.style.display = text.includes(filter) ? "" : "none";
     });
 });
+
+// Status Filter
+document.getElementById("filterStatus").addEventListener("change", function () {
+    let selected = this.value;
+    let rows = document.querySelectorAll("#ordersTable tbody tr");
+
+    rows.forEach(row => {
+        let status = row.getAttribute("data-status");
+        row.style.display = (selected === "" || status === selected) ? "" : "none";
+    });
+});
 </script>
 
 <?php
-renderLayout(ob_get_clean(), "All Orders");
-
+renderLayout("All Orders", ob_get_clean(), "orders");
 ?>
