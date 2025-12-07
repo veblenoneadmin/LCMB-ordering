@@ -4,7 +4,7 @@ require_once __DIR__ . '/layout.php';
 
 // Fetch all personnel
 $stmt = $pdo->query("
-    SELECT id, name, email, role, rate, category, created_at
+    SELECT id, name, email, role, rate, category
     FROM personnel
     ORDER BY id DESC
 ");
