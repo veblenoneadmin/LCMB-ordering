@@ -115,13 +115,13 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
             <span class="material-icons text-gray-500">expand_more</span>
         </button>
         <div id="userMenu" class="hidden mt-1 rounded-lg">
-            <a href="profile.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="profile.php" class="flex items-center gap-3 px-3 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">person</span> Profile
             </a>
-            <a href="settings.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
+            <a href="settings.php" class="flex items-center gap-3 px-3 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-icons text-gray-500 text-base">settings</span> Settings
             </a>
-            <a href="logout.php" class="flex items-center gap-3 px-1.5 py-2 text-red-600 rounded hover:bg-gray-100">
+            <a href="logout.php" class="flex items-center gap-3 px-3 py-2 text-red-600 rounded hover:bg-gray-100">
                 <span class="material-icons text-red-500 text-base">logout</span> Logout
             </a>
         </div>
@@ -129,70 +129,40 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 
     <div class="border-b border-gray-200 mt-1"></div>
 
-    <!-- NAV ITEMS (FIXED LINKS) -->
-    <a href="index.php" class="sidebar-link <?= $activePage=='index'?'sidebar-active':'' ?>">
-        <span class="material-icons">dashboard</span> Home
-    </a>
+    <!-- NAV ITEMS -->
+    <?php
+    $navItems = [
+        ['href'=>'index.php','icon'=>'dashboard','label'=>'Home','page'=>'index'],
+        ['href'=>'create_order.php','icon'=>'add_shopping_cart','label'=>'Create Order','page'=>'create_order'],
+        ['href'=>'orders.php','icon'=>'receipt_long','label'=>'Orders','page'=>'orders']
+    ];
+    foreach($navItems as $nav):
+        $active = $activePage==$nav['page']?'sidebar-active':'';
+    ?>
+        <a href="<?= $nav['href'] ?>" class="flex items-center w-full gap-3 px-3 py-2 rounded-lg font-medium transition-colors <?= $active ?> hover:bg-blue-600 hover:text-white">
+            <span class="material-icons <?= $active ? 'text-white':'text-gray-500' ?>"><?= $nav['icon'] ?></span>
+            <span class="<?= $active ? 'text-white':'text-gray-700' ?>"><?= $nav['label'] ?></span>
+        </a>
+    <?php endforeach; ?>
 
-    <a href="create_order.php" class="sidebar-link <?= $activePage=='create_order'?'sidebar-active':'' ?>">
-        <span class="material-icons">add_shopping_cart</span> Create Order
-    </a>
-
-    <a href="orders.php" class="sidebar-link <?= $activePage=='orders'?'sidebar-active':'' ?>">
-        <span class="material-icons">receipt_long</span> Orders
-    </a>
-
-    <a href="personnel.php" class="sidebar-link <?= $activePage=='personnel'?'sidebar-active':'' ?>">
-        <span class="material-icons">people_alt</span> Personnel
-    </a>
-
-    <!-- PRODUCTS DROPDOWN -->
+    <!-- INSTALLATION DROPDOWN -->
     <div class="w-full">
-        <button id="productsToggleBtn" class="w-full flex items-center justify-between py-2 rounded-lg hover:bg-gray-100 transition">
+        <button id="installationToggleBtn" class="flex items-center w-full justify-between px-3 py-2 rounded-lg font-medium text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
             <div class="flex items-center gap-3">
-                <span class="material-icons text-gray-500">inventory_2</span>
-                <p class="font-medium text-gray-500">Products</p>
+                <span class="material-icons text-gray-500">engineering</span>
+                Installation
             </div>
             <span class="material-icons text-gray-500">expand_more</span>
         </button>
-
-        <div id="productsMenu" class="hidden mt-1 rounded-lg">
-            <a href="products.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-icons text-gray-500 text-base">electrical_services</span> Electrical Items
+        <div id="installationMenu" class="hidden mt-1 flex flex-col gap-1">
+            <a href="ducted_installations.php" class="flex items-center gap-3 px-5 py-2 rounded-lg text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
+                <span class="material-icons text-gray-500">view_in_ar</span> Ducted Installation
             </a>
-            <a href="ducted_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-icons text-gray-500 text-base">view_in_ar</span> Ducted Installations
-            </a>
-            <a href="split_installations.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-icons text-gray-500 text-base">ac_unit</span> Split System Installation
+            <a href="split_installations.php" class="flex items-center gap-3 px-5 py-2 rounded-lg text-gray-700 hover:bg-blue-600 hover:text-white transition-colors">
+                <span class="material-icons text-gray-500">ac_unit</span> Split Installation
             </a>
         </div>
     </div>
-
-    <?php if ($role === 'admin'): ?>
-    <!-- SETTINGS DROPDOWN -->
-    <div class="w-full mb-2">
-        <button id="settingsToggleBtn" class="w-full flex items-center justify-between py-2 rounded-lg hover:bg-gray-100 transition">
-            <div class="flex items-center gap-3">
-                <span class="material-icons text-gray-500">settings</span>
-                <p class="font-medium text-gray-500">Settings</p>
-            </div>
-            <span class="material-icons text-gray-500">expand_more</span>
-        </button>
-
-        <div id="settingsMenu" class="hidden mt-1 rounded-lg">
-            <button id="openTaxModal" class="w-full text-left flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-icons text-gray-500 text-base">percent</span> Tax
-            </button>
-            <a href="gst.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-icons text-gray-500 text-base">receipt_long</span> GST
-            </a>
-            <a href="users.php" class="sidebar-link <?= $activePage=='users'?'sidebar-active':'' ?>">
-                <span class="material-icons">people_alt</span> Users
-            </a>
-        </div>
-    </div>
-    <?php endif; ?>
 </aside>
 
 <!-- Dropdown Script -->
