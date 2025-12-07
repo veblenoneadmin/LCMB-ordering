@@ -4,14 +4,14 @@ require_once __DIR__ . '/layout.php';
 
 // Fetch all personnel
 $stmt = $pdo->query("
-    SELECT id, name, email, role, rate, created_at 
+    SELECT id, name, email, role, rate, category
     FROM personnel
-    ORDER BY created_at DESC
+    ORDER BY id DESC
 ");
 
 $personnel = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Role filter options (you may adjust)
+// Role filter options
 $roles = ['Technician', 'Installer', 'Assistant'];
 ?>
 
@@ -64,7 +64,7 @@ $roles = ['Technician', 'Installer', 'Assistant'];
                     <th class="py-2 px-2">Email</th>
                     <th class="py-2 px-2">Role</th>
                     <th class="py-2 px-2">Rate</th>
-                    <th class="py-2 px-2">Created</th>
+                    <th class="py-2 px-2">Category</th>
                     <th class="py-2 px-2 w-40">Actions</th>
                 </tr>
             </thead>
@@ -86,9 +86,7 @@ $roles = ['Technician', 'Installer', 'Assistant'];
                         ₱<?= number_format($p['rate'], 2) ?>
                     </td>
 
-                    <td class="py-2 px-2 text-gray-500 text-sm">
-                        <?= date("M d, Y", strtotime($p['created_at'])) ?>
-                    </td>
+                    <td class="py-2 px-2"><?= htmlspecialchars($p['category']) ?></td>
 
                     <td class="py-2 px-2 flex gap-2">
 
@@ -97,7 +95,8 @@ $roles = ['Technician', 'Installer', 'Assistant'];
                                 data-name="<?= htmlspecialchars($p['name']) ?>"
                                 data-email="<?= htmlspecialchars($p['email']) ?>"
                                 data-role="<?= htmlspecialchars($p['role']) ?>"
-                                data-rate="<?= $p['rate'] ?>">
+                                data-rate="<?= $p['rate'] ?>"
+                                data-category="<?= htmlspecialchars($p['category']) ?>">
                             Edit
                         </button>
 
@@ -146,6 +145,10 @@ $roles = ['Technician', 'Installer', 'Assistant'];
                    placeholder="Daily rate"
                    class="w-full mb-4 border p-2 rounded" required>
 
+            <input type="text" name="category"
+                   placeholder="Category"
+                   class="w-full mb-4 border p-2 rounded" required>
+
             <div class="flex justify-end gap-3">
                 <button type="button" id="cancelAdd" class="px-4 py-2 bg-gray-300 rounded-lg">
                     Cancel
@@ -187,6 +190,9 @@ $roles = ['Technician', 'Installer', 'Assistant'];
             <input type="number" step="0.01" name="rate" id="edit_rate"
                    class="w-full mb-4 border p-2 rounded" required>
 
+            <input type="text" name="category" id="edit_category"
+                   class="w-full mb-4 border p-2 rounded" required>
+
             <div class="flex justify-end gap-3">
                 <button type="button" id="cancelEdit" class="px-4 py-2 bg-gray-300 rounded-lg">
                     Cancel
@@ -208,7 +214,7 @@ $roles = ['Technician', 'Installer', 'Assistant'];
     <div class="bg-white p-6 rounded-xl shadow-lg w-96">
         <h2 class="text-lg font-semibold mb-3">Import Personnel via CSV</h2>
 
-        <form method="POST" action="import_personnel.php" enctype="multipart/form-data">
+        <form method="POST" action="partial/import_personnel.php" enctype="multipart/form-data">
 
             <input type="file" name="csv_file" accept=".csv"
                    class="w-full mb-4" required>
@@ -246,6 +252,7 @@ document.querySelectorAll(".editBtn").forEach(btn => {
         document.getElementById("edit_email").value = btn.dataset.email;
         document.getElementById("edit_role").value = btn.dataset.role;
         document.getElementById("edit_rate").value = btn.dataset.rate;
+        document.getElementById("edit_category").value = btn.dataset.category;
 
         document.getElementById("editModal").classList.remove("hidden");
         document.getElementById("editModal").classList.add("flex");
