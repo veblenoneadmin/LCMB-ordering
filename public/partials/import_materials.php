@@ -30,5 +30,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
 }
 
 // Redirect back to materials page
-header("Location: products.php");
+header("Location: materials.php");
 exit;
