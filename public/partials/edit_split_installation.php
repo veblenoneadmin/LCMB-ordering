@@ -18,6 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-header("Location: ../split_installation.php");
+header("Location: split_installation.php");
 exit;
 ?>
