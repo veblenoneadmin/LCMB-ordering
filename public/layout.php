@@ -41,6 +41,68 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         .pers-check { transform:scale(0.9); }
         #appointment_date::placeholder { color:#999; opacity:1; }
         #calendar { height: 700px; background-color: #ffffff; border-radius: 12px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 10px; }
+    
+    /* ----------------- FullCalendar Compact Dashboard Theme ----------------- */
+
+/* Toolbar buttons smaller and rounded */
+.fc .fc-button {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    border-radius: 0.5rem !important; /* rounded like your buttons */
+    background-color: #3b82f6 !important; /* primary dashboard color */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.fc .fc-button:hover {
+    background-color: #2563eb !important;
+}
+
+/* Month/Week/List title */
+.fc-toolbar-title {
+    font-size: 18px !important;
+    font-weight: 600;
+    color: #1f2937; /* dark gray */
+}
+
+/* Reduce spacing between buttons in toolbar */
+.fc-toolbar .fc-toolbar-chunk {
+    gap: 4px !important;
+}
+
+/* Smaller day numbers */
+.fc-daygrid-day-number {
+    font-size: 12px !important;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Smaller event text */
+.fc-event {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+    border-radius: 0.5rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Tighter week/day grid cells */
+.fc-daygrid-day {
+    padding: 2px !important;
+}
+
+/* Optional: reduce header height */
+.fc .fc-toolbar {
+    padding: 4px 8px !important;
+}
+
+/* Optional: reduce time grid row height */
+.fc-timegrid-event {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+}
+
+    
     </style>
 </head>
 

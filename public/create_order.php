@@ -194,18 +194,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        // Insert dispatch rows for personnel
-        if (!empty($personnel_dispatch_rows)) {
-            $stmt_dispatch = $pdo->prepare("
-                INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
-                VALUES (?, ?, ?, ?, NOW())
-            ");
-            foreach ($personnel_dispatch_rows as $r) {
-                $d = $r['date'] ?: date('Y-m-d');
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) $d = date('Y-m-d');
-                $stmt_dispatch->execute([$order_id, $r['personnel_id'], $d, f2($r['hours'])]);
-            }
-        }
+       // Insert dispatch rows for personnel
+if (!empty($personnel_dispatch_rows)) {
+   $stmt_dispatch = $pdo->prepare("
+    INSERT INTO dispatch (order_id, personnel_id, date, hours, created_at)
+    VALUES (?, ?, ?, ?, NOW())
+");
+
+$stmt_dispatch->execute([
+    $order_id,
+    $r['personnel_id'],
+    $d,
+    f2($r['hours'])
+]);
+
 
         $pdo->commit();
         header("Location: review_order.php?order_id=" . $order_id);
