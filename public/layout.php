@@ -49,7 +49,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     padding: 4px 8px !important;
     font-size: 12px !important;
     border-radius: 0.5rem !important; /* rounded like your buttons */
-    background-color: #3b82f6 !important; /* primary dashboard color */
+    background-color: #051650 !important; /* primary dashboard color */
     color: white !important;
     border: none !important;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -62,8 +62,8 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 /* Month/Week/List title */
 .fc-toolbar-title {
     font-size: 18px !important;
-    font-weight: 600;
-    color: #1f2937; /* dark gray */
+    font-weight: 400;
+    color: #333f50ff; /* dark gray */
 }
 
 /* Reduce spacing between buttons in toolbar */

@@ -6,11 +6,15 @@ $order_id = intval($_POST['order_id'] ?? 0);
 $new_status = $_POST['status'] ?? '';
 
 if ($order_id && $new_status) {
-    // 1. Update status
+    // 1. Update order status
     $stmt = $pdo->prepare("UPDATE orders SET status=? WHERE id=?");
     $stmt->execute([$new_status, $order_id]);
 
-    // 2. Trigger calendar or N8N only when approved
+    // 2. Update dispatch status for this order
+    $stmt_dispatch = $pdo->prepare("UPDATE dispatch SET status=? WHERE order_id=?");
+    $stmt_dispatch->execute([$new_status, $order_id]);
+
+    // 3. Trigger calendar or N8N only when approved
     if ($new_status === 'approved') {
         // Fetch personnel email or event info
         $stmt = $pdo->prepare("SELECT p.name, p.email, o.appointment_date
@@ -29,3 +33,4 @@ if ($order_id && $new_status) {
 
     echo json_encode(['success' => true]);
 }
+?>
