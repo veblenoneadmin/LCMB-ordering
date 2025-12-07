@@ -129,5 +129,6 @@ document.getElementById("searchOrders").addEventListener("keyup", function () {
 </script>
 
 <?php
-renderLayout(ob_get_clean());
+renderLayout(ob_get_clean(), "All Orders");
+
 ?>
