@@ -13,7 +13,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <title><?= $titleEsc ?></title>
 
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@20..48,200,0,0" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp:opsz,wght,FILL,GRAD@20..48,300,0,0" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -23,7 +23,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
         .sidebar-link { display:flex; align-items:center; padding:5px 8px; gap:6px;
                         font-weight:500; color:#64748B; font-size:0.875rem; transition:0.25s; }
-        .sidebar-link .material-symbols-sharp { font-variation-settings:'wght' 200; font-size:20px; color:#94A3B8; }
+        .sidebar-link .material-symbols-sharp { font-variation-settings:'wght' 200; font-size:20px; color:#666c75; }
         .sidebar-link:hover { background:#0f1d88; color:#fff; }
         .sidebar-link:hover .material-symbols-sharp { color:#fff; }
         .sidebar-active { background:#0f1d88; color:#fff !important; }
@@ -67,9 +67,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
             <a href="profile.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
                 <span class="material-symbols-sharp text-gray-500 text-base">person</span> Profile
             </a>
-            <a href="settings.php" class="flex items-center gap-3 px-1.5 py-2 text-gray-700 rounded hover:bg-gray-100">
-                <span class="material-symbols-sharp text-gray-500 text-base">settings</span> Settings
-            </a>
+           
             <a href="logout.php" class="flex items-center gap-3 px-1.5 py-2 text-red-600 rounded hover:bg-gray-100">
                 <span class="material-symbols-sharp text-red-500 text-base">logout</span> Logout
             </a>
@@ -77,15 +75,15 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     </div>
 
     <div class="border-b border-gray-200 mt-1"></div>
-
+<br>
     <!-- NAV ITEMS -->
 <?php
 $navItems = array(
-    array('href'=>'index.php','icon'=>'dashboard','label'=>'Home','page'=>'index'),
-    array('href'=>'create_order.php','icon'=>'add_shopping_cart','label'=>'Create Order','page'=>'create_order'),
-    array('href'=>'orders.php','icon'=>'receipt_long','label'=>'Orders','page'=>'orders'),
+    array('href'=>'index.php','icon'=>'dashboard','label'=>'home','page'=>'index'),
+    array('href'=>'create_order.php','icon'=>'inventory','label'=>'Create Order','page'=>'create_order'),
+    array('href'=>'orders.php','icon'=>'content_paste_go','label'=>'Orders','page'=>'orders'),
     array('href'=>'personnel.php','icon'=>'people_alt','label'=>'Personnel','page'=>'personnel'),
-    array('href'=>'materials.php','icon'=>'inventory_2','label'=>'Materials','page'=>'materials')
+    array('href'=>'materials.php','icon'=>'deployed_code','label'=>'Materials','page'=>'materials')
 );
 
 foreach($navItems as $item) {
@@ -99,7 +97,7 @@ foreach($navItems as $item) {
 <!-- Installation Dropdown -->
 <div class="w-full">
     <button id="installToggleBtn" class="w-full flex items-center justify-between py-2 rounded-lg hover:bg-gray-100 transition">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
             <span class="material-symbols-sharp">construction</span>
             <p class="font-medium text-gray-500">Installation</p>
         </div>
@@ -141,7 +139,7 @@ document.getElementById("installToggleBtn").onclick = () => {
                 <input type="text" placeholder="Search here" class="border rounded-lg px-4 py-2 pl-10 w-48 md:w-64 bg-transparent shadow-sm focus:outline-none focus:border-indigo-500">
                 <span class="material-symbols-sharp absolute left-3 top-2 text-gray-400 text-base">search</span>
             </div>
-            <span class="material-symbols-sharp text-gray-600 hover:text-gray-900 cursor-pointer">account_circle</span>
+        
             <span class="material-symbols-sharp text-gray-600 hover:text-gray-900 cursor-pointer">settings</span>
             <span class="material-symbols-sharp text-gray-600 hover:text-gray-900 cursor-pointer">notifications</span>
         </div>
