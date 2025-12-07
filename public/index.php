@@ -30,16 +30,17 @@ foreach ($dispatch as $row) {
     }
 
     $events[] = [
-        "id" => $row['id'],
-        "title" => $person . " (" . $row['hours'] . "h)",
-        "start" => $row['date'],
-        "color" => $personnelColors[$person],
-        "extendedProps" => [
-            "personnel" => $person,
-            "hours" => $row['hours'],
-            "date" => $row['date']
-        ]
-    ];
+    "id" => $row['id'],
+    "title" => $person,  // <-- only name
+    "start" => $row['date'],
+    "color" => $personnelColors[$person],
+    "extendedProps" => [
+        "personnel" => $person,
+        "hours" => $row['hours'],
+        "date" => $row['date']
+    ]
+];
+
 }
 
 ob_start();
@@ -82,7 +83,7 @@ ob_start();
    <!-- Right Panel: Pending Orders -->
 <div class="bg-white p-4 rounded-xl shadow border border-gray-100 h-[500px] overflow-y-auto ml-auto"
      style="width: 260px;"> <!-- approximate width of one analytic card -->
-    <h2 class="text-lg font-semibold text-gray-600 mb-4">Pending Orders</h2>
+    <h2 class="text-md font-semibold text-gray-600 mb-4">Pending Orders</h2>
 
     <?php
     $pendingList = $pdo->query("SELECT id, customer_name, total_amount, created_at FROM orders WHERE status='pending' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
@@ -99,8 +100,8 @@ ob_start();
              data-id="<?= $o['id'] ?>"
              data-customer="<?= htmlspecialchars($o['customer_name']) ?>"
              data-total="<?= number_format($o['total_amount'],2) ?>">
-            <p class="text-md font-bold text-gray-600">New Order#<?= $o['id'] ?></p>
-            <p class="text-sm text-gray-500"><?= $date ?><?= $time ?></p>
+            <p class="text-md font-bold text-gray-500">New Order#<?= $o['id'] ?></p>
+            <p class="text-sm text-gray-400"><?= $date ?><?= $time ?></p>
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
@@ -179,7 +180,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('cmTitle').innerText = info.event.title;
             document.getElementById('cmDate').innerText = "Date: " + e.date;
             document.getElementById('cmPersonnel').innerText = "Personnel: " + e.personnel;
-            document.getElementById('cmHours').innerText = "Hours: " + e.hours;
 
             calendarModal.classList.remove('hidden');
             void cmContent.offsetWidth;

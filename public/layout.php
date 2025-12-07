@@ -47,16 +47,16 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
 /* Toolbar buttons smaller and rounded */
 .fc .fc-button {
     padding: 4px 8px !important;
-    font-size: 12px !important;
+    font-size: 10px !important;
     border-radius: 0.5rem !important; /* rounded like your buttons */
-    background-color: #051650 !important; /* primary dashboard color */
+    background-color: #525252ff !important; /* primary dashboard color */
     color: white !important;
     border: none !important;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .fc .fc-button:hover {
-    background-color: #2563eb !important;
+    background-color: #10234dff !important;
 }
 
 /* Month/Week/List title */
