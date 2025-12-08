@@ -15,11 +15,8 @@ if (!$order) {
 }
 
 // Fetch items
-$itemStmt = $pdo->prepare("
-    SELECT * FROM order_items
-    WHERE order_id = ?
-    ORDER BY category ASC
-");
+$stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ? ORDER BY id");
+
 $itemStmt->execute([$order_id]);
 $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -34,7 +31,9 @@ $groups = [
 ];
 
 foreach ($items as $item) {
-    $groups[$item["category"]][] = $item;
+    $groups[$item["item_category"]][] = $item;
+
+
 }
 
 // Calculate summary totals
@@ -192,8 +191,7 @@ document.querySelectorAll(".addItemForm").forEach(form => {
     form.onsubmit = e => {
         e.preventDefault();
         const data = new FormData(form);
-        data.append("category", form.dataset.category);
-
+        data.append("item_category", form.dataset.category);
         fetch("partials/add_item.php", { method: "POST", body: data })
             .then(r => r.json())
             .then(res => {
