@@ -122,10 +122,10 @@ ob_start();
             <p id="pmTotal"></p>
         </div>
         <div class="flex justify-between mt-6">
-            <form method="POST" action="/partials/update_status.php">
-                <input type="hidden" name="order_id" id="pmOrderId">
-                <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
-            </form>
+            <form id="approveForm">
+    <input type="hidden" name="order_id" id="pmOrderId">
+    <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
+</form>
             <button id="pmClose" class="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400">Close</button>
         </div>
     </div>
@@ -195,6 +195,45 @@ document.addEventListener('DOMContentLoaded', function () {
         calendarModal.classList.remove('show');
         setTimeout(() => calendarModal.classList.add('hidden'), 300);
     });
+
+    //-- update status -- //
+    document.addEventListener('DOMContentLoaded', () => {
+    const approveForm = document.getElementById('approveForm');
+    const pendingModal = document.getElementById('pendingModal');
+    const pmContent = document.getElementById('pendingModalContent');
+
+    approveForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(approveForm);
+
+        // Add 'action' for your PHP
+        formData.append('action', 'approve');
+
+        fetch('partials/update_status.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Show popup/alert
+                alert('Order approved successfully!');
+
+                // Close modal
+                pendingModal.classList.remove('show');
+                setTimeout(() => pendingModal.classList.add('hidden'), 300);
+
+                // Optionally: update pending orders list or reload page
+                location.reload();
+            } else {
+                alert('Failed to approve order: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err));
+    });
+});
+
 
     // --- Pending Orders Modal ---
     const pendingItems = document.querySelectorAll('.pending-item');

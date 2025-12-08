@@ -22,7 +22,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <style>
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
         .sidebar-link { display:flex; align-items:center; padding:5px 8px; gap:6px;
-                        font-weight:500; color:#64748B; font-size:0.875rem; transition:0.25s; }
+                        font-weight:500; color:#64748B; font-size:12px; transition:0.25s; }
         .sidebar-link .material-symbols-sharp { font-variation-settings:'wght' 300; font-size:20px; color:#484b4f; }
         .sidebar-link:hover { background:#0f1d88; color:#fff; }
         .sidebar-link:hover .material-symbols-sharp { color:#fff; }
