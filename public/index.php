@@ -197,18 +197,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     //-- update status -- //
-    document.addEventListener('DOMContentLoaded', () => {
+   document.addEventListener('DOMContentLoaded', () => {
     const approveForm = document.getElementById('approveForm');
     const pendingModal = document.getElementById('pendingModal');
     const pmContent = document.getElementById('pendingModalContent');
 
     approveForm.addEventListener('submit', (e) => {
-        e.preventDefault();
+        e.preventDefault(); // prevent normal form submit
 
         const formData = new FormData(approveForm);
-
-        // Add 'action' for your PHP
-        formData.append('action', 'approve');
+        formData.append('action', 'approve'); // your PHP expects 'action'
 
         fetch('/partials/update_status.php', {
             method: 'POST',
@@ -217,17 +215,17 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Show popup/alert
+                // Show popup
                 alert('Order approved successfully!');
 
                 // Close modal
                 pendingModal.classList.remove('show');
                 setTimeout(() => pendingModal.classList.add('hidden'), 300);
 
-                // Optionally: update pending orders list or reload page
+                // Refresh page or update pending orders list dynamically
                 location.reload();
             } else {
-                alert('Failed to approve order: ' + (data.message || 'Unknown error'));
+                alert('Failed: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(err => alert('Error: ' + err));

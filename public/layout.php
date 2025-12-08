@@ -22,7 +22,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <style>
         body { background: #f8f9fa; font-family: "Roboto", sans-serif; }
         .sidebar-link { display:flex; align-items:center; padding:5px 8px; gap:6px;
-                        font-weight:500; color:#64748B; font: size 16px; transition:0.25s; }
+                        font-weight:500; color:#64748B; font: size 18px; transition:0.25s; }
         .sidebar-link .material-symbols-sharp { font-variation-settings:'wght' 300; font-size:20px; color:#484b4f; }
         .sidebar-link:hover { background:#0f1d88; color:#fff; }
         .sidebar-link:hover .material-symbols-sharp { color:#fff; }
@@ -141,7 +141,7 @@ function renderLayout(string $title, string $content, string $activePage = ""): 
     <!-- NAV ITEMS -->
 <?php
 $navItems = array(
-    array('href'=>'index.php','icon'=>'dashboard','label'=>'home','page'=>'index'),
+    array('href'=>'index.php','icon'=>'dashboard','label'=>'Home','page'=>'index'),
     array('href'=>'create_order.php','icon'=>'inventory','label'=>'Create Order','page'=>'create_order'),
     array('href'=>'orders.php','icon'=>'content_paste_go','label'=>'Orders','page'=>'orders'),
     array('href'=>'personnel.php','icon'=>'people_alt','label'=>'Personnel','page'=>'personnel'),
