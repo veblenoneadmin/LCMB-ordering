@@ -4,21 +4,25 @@ require_once __DIR__ . '/layout.php';
 
 $order_id = $_GET['order_id'] ?? 0;
 
-// Fetch order
+// Fetch main order
 $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
 $stmt->execute([$order_id]);
-$order = $stmt->fetch();
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
-    renderLayout("Order Not Found", "<p class='p-4 text-red-600'>Order not found or deleted.</p>");
-    exit;
+    die("Order not found");
 }
 
 // Fetch items
-$stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ? ORDER BY id");
-
+$itemStmt = $pdo->prepare("
+    SELECT *
+    FROM order_items
+    WHERE order_id = ?
+    ORDER BY id ASC
+");
 $itemStmt->execute([$order_id]);
 $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
 
 // Group items
 $groups = [
