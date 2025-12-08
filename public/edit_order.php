@@ -2,222 +2,208 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/layout.php';
 
-// Get the order ID
 $order_id = $_GET['order_id'] ?? 0;
 
-// Fetch order details
-$stmt = $pdo->prepare("SELECT * FROM orders WHERE id=?");
+// Fetch order
+$stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
 $stmt->execute([$order_id]);
-$order = $stmt->fetch(PDO::FETCH_ASSOC);
+$order = $stmt->fetch();
 
-// Fetch order items
-$products = $pdo->prepare("SELECT * FROM order_items WHERE order_id=? AND type='product'");
-$products->execute([$order_id]);
-$products = $products->fetchAll(PDO::FETCH_ASSOC);
-
-$split = $pdo->prepare("SELECT * FROM order_items WHERE order_id=? AND type='split'");
-$split->execute([$order_id]);
-$split = $split->fetchAll(PDO::FETCH_ASSOC);
-
-$ducted = $pdo->prepare("SELECT * FROM order_items WHERE order_id=? AND type='ducted'");
-$ducted->execute([$order_id]);
-$ducted = $ducted->fetchAll(PDO::FETCH_ASSOC);
-
-$personnel = $pdo->prepare("SELECT * FROM order_personnel WHERE order_id=?");
-$personnel->execute([$order_id]);
-$personnel = $personnel->fetchAll(PDO::FETCH_ASSOC);
-
-$expenses = $pdo->prepare("SELECT * FROM order_expenses WHERE order_id=?");
-$expenses->execute([$order_id]);
-$expenses = $expenses->fetchAll(PDO::FETCH_ASSOC);
-?>
-
-<?php ob_start(); ?>
-
-<div class="p-6">
-
-<h2 class="text-2xl font-semibold text-gray-800 mb-6">Edit Order #<?= $order['id'] ?></h2>
-
-<!-- PRODUCTS TABLE -->
-<div class="mb-6 bg-white p-4 rounded-2xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-700">Products</h3>
-        <button id="addProductBtn" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">Add Product</button>
-    </div>
-    <table class="w-full border-collapse" id="productsTable">
-        <thead>
-            <tr class="border-b text-left text-gray-700">
-                <th>Name</th><th>Qty</th><th>Price</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($products as $p): ?>
-            <tr>
-                <td><?= htmlspecialchars($p['name']) ?></td>
-                <td><?= $p['quantity'] ?></td>
-                <td><?= number_format($p['price'],2) ?></td>
-                <td class="flex gap-2">
-                    <button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- SPLIT TABLE -->
-<div class="mb-6 bg-white p-4 rounded-2xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-700">Split Installations</h3>
-        <button id="addSplitBtn" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">Add Split</button>
-    </div>
-    <table class="w-full border-collapse" id="splitTable">
-        <thead>
-            <tr class="border-b text-left text-gray-700">
-                <th>Name</th><th>Qty</th><th>Capacity</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($split as $s): ?>
-            <tr>
-                <td><?= htmlspecialchars($s['name']) ?></td>
-                <td><?= $s['quantity'] ?></td>
-                <td><?= htmlspecialchars($s['capacity']) ?></td>
-                <td class="flex gap-2">
-                    <button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- DUCTED TABLE -->
-<div class="mb-6 bg-white p-4 rounded-2xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-700">Ducted Installations</h3>
-        <button id="addDuctedBtn" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">Add Ducted</button>
-    </div>
-    <table class="w-full border-collapse" id="ductedTable">
-        <thead>
-            <tr class="border-b text-left text-gray-700">
-                <th>Name</th><th>Qty</th><th>Type</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($ducted as $d): ?>
-            <tr>
-                <td><?= htmlspecialchars($d['name']) ?></td>
-                <td><?= $d['quantity'] ?></td>
-                <td><?= htmlspecialchars($d['installation_type']) ?></td>
-                <td class="flex gap-2">
-                    <button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- PERSONNEL TABLE -->
-<div class="mb-6 bg-white p-4 rounded-2xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-700">Personnel</h3>
-        <button id="addPersonnelBtn" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">Add Personnel</button>
-    </div>
-    <table class="w-full border-collapse" id="personnelTable">
-        <thead>
-            <tr class="border-b text-left text-gray-700">
-                <th>Name</th><th>Role</th><th>Rate</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($personnel as $p): ?>
-            <tr>
-                <td><?= htmlspecialchars($p['name']) ?></td>
-                <td><?= htmlspecialchars($p['role']) ?></td>
-                <td><?= number_format($p['rate'],2) ?></td>
-                <td class="flex gap-2">
-                    <button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- EXPENSES TABLE -->
-<div class="mb-6 bg-white p-4 rounded-2xl shadow border border-gray-200">
-    <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold text-gray-700">Expenses</h3>
-        <button id="addExpenseBtn" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm shadow">Add Expense</button>
-    </div>
-    <table class="w-full border-collapse" id="expensesTable">
-        <thead>
-            <tr class="border-b text-left text-gray-700">
-                <th>Item</th><th>Amount</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach($expenses as $e): ?>
-            <tr>
-                <td><?= htmlspecialchars($e['item']) ?></td>
-                <td><?= number_format($e['amount'],2) ?></td>
-                <td class="flex gap-2">
-                    <button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-</div>
-
-<script>
-// Helper function to add rows
-function addRow(tableId, columnsHtml) {
-    const tableBody = document.querySelector(`#${tableId} tbody`);
-    const newRow = document.createElement("tr");
-    newRow.innerHTML = columnsHtml;
-    tableBody.appendChild(newRow);
-
-    const removeBtn = newRow.querySelector(".removeRowBtn");
-    if (removeBtn) removeBtn.onclick = () => newRow.remove();
+if (!$order) {
+    renderLayout("Order Not Found", "<p class='p-4 text-red-600'>Order not found or deleted.</p>");
+    exit;
 }
 
-// Add buttons
-document.getElementById("addProductBtn").onclick = () => addRow("productsTable", `
-    <td><input type="text" name="product_name[]" class="border p-1 rounded w-full"></td>
-    <td><input type="number" name="quantity[]" class="border p-1 rounded w-20"></td>
-    <td><input type="number" name="price[]" class="border p-1 rounded w-28"></td>
-    <td class="flex gap-2"><button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button></td>
-`);
-document.getElementById("addSplitBtn").onclick = () => addRow("splitTable", `
-    <td><input type="text" name="split_name[]" class="border p-1 rounded w-full"></td>
-    <td><input type="number" name="split_qty[]" class="border p-1 rounded w-20"></td>
-    <td><input type="text" name="split_capacity[]" class="border p-1 rounded w-28"></td>
-    <td class="flex gap-2"><button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button></td>
-`);
-document.getElementById("addDuctedBtn").onclick = () => addRow("ductedTable", `
-    <td><input type="text" name="ducted_name[]" class="border p-1 rounded w-full"></td>
-    <td><input type="number" name="ducted_qty[]" class="border p-1 rounded w-20"></td>
-    <td><input type="text" name="ducted_type[]" class="border p-1 rounded w-28"></td>
-    <td class="flex gap-2"><button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button></td>
-`);
-document.getElementById("addPersonnelBtn").onclick = () => addRow("personnelTable", `
-    <td><input type="text" name="personnel_name[]" class="border p-1 rounded w-full"></td>
-    <td><input type="text" name="personnel_role[]" class="border p-1 rounded w-full"></td>
-    <td><input type="number" name="personnel_rate[]" class="border p-1 rounded w-28"></td>
-    <td class="flex gap-2"><button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button></td>
-`);
-document.getElementById("addExpenseBtn").onclick = () => addRow("expensesTable", `
-    <td><input type="text" name="expense_item[]" class="border p-1 rounded w-full"></td>
-    <td><input type="number" name="expense_amount[]" class="border p-1 rounded w-28"></td>
-    <td class="flex gap-2"><button type="button" class="removeRowBtn px-2 py-1 bg-red-500 text-white rounded">Remove</button></td>
-`);
+// Fetch items
+$itemStmt = $pdo->prepare("
+    SELECT * FROM order_items
+    WHERE order_id = ?
+    ORDER BY category ASC
+");
+$itemStmt->execute([$order_id]);
+$items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Group items
+$groups = [
+    "product" => [],
+    "ducted" => [],
+    "split" => [],
+    "persons" => [],
+    "equipments" => [],
+    "additional" => [],
+];
+
+foreach ($items as $item) {
+    $groups[$item["category"]][] = $item;
+}
+
+// Calculate summary totals
+$total_products = array_sum(array_column($groups["product"], 'subtotal'));
+$total_ducted   = array_sum(array_column($groups["ducted"], 'subtotal'));
+$total_split    = array_sum(array_column($groups["split"], 'subtotal'));
+$total_personnel= array_sum(array_column($groups["persons"], 'subtotal'));
+$total_equip    = array_sum(array_column($groups["equipments"], 'subtotal'));
+$total_additional = array_sum(array_column($groups["additional"], 'subtotal'));
+
+$grand_total =
+    $total_products +
+    $total_ducted +
+    $total_split +
+    $total_personnel +
+    $total_equip +
+    $total_additional;
+
+ob_start();
+?>
+
+<div class="grid grid-cols-12 gap-4">
+
+    <!-- LEFT: ORDER ITEMS -->
+    <div class="col-span-8 space-y-6">
+
+        <!-- CATEGORY BLOCK -->
+        <?php
+        function renderCategoryBlock($title, $catKey, $items) {
+            ?>
+            <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+
+                <!-- Header + Add Button -->
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-semibold text-gray-700"><?= $title ?></h2>
+                    <button 
+                        class="addBtn text-sm px-3 py-1 rounded bg-blue-500 text-white"
+                        data-target="<?= $catKey ?>FormWrap">
+                        Add
+                    </button>
+                </div>
+
+                <!-- Table -->
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr class="text-left border-b">
+                        <th>Name</th>
+                        <th width="80">Qty</th>
+                        <th width="100">Unit</th>
+                        <th width="100">Subtotal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php if (count($items)): ?>
+                        <?php foreach ($items as $i): ?>
+                            <tr class="border-b">
+                                <td><?= htmlspecialchars($i["item_name"]) ?></td>
+                                <td><?= $i["quantity"] ?></td>
+                                <td><?= number_format($i["unit_price"], 2) ?></td>
+                                <td><?= number_format($i["subtotal"], 2) ?></td>
+                            </tr>
+                        <?php endforeach ?>
+                    <?php else: ?>
+                        <tr><td colspan="4" class="text-gray-400 p-2">No items</td></tr>
+                    <?php endif ?>
+                    </tbody>
+                </table>
+
+                <!-- Add Form -->
+                <div id="<?= $catKey ?>FormWrap" class="hidden mt-3">
+                    <form class="addItemForm space-y-2" data-category="<?= $catKey ?>">
+                        <input type="hidden" name="order_id" value="<?= $GLOBALS['order_id'] ?>">
+
+                        <input name="item_name" class="w-full border p-2 rounded" placeholder="Item name" required>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <input name="quantity" type="number" class="border p-2 rounded" placeholder="Qty" required>
+                            <input name="unit_price" type="number" step="0.01" class="border p-2 rounded" placeholder="Unit Price" required>
+                            <input name="installation_type" class="border p-2 rounded" placeholder="Installation (optional)">
+                        </div>
+
+                        <button class="bg-green-500 text-white px-3 py-2 rounded text-sm">Save Item</button>
+                    </form>
+                </div>
+
+            </div>
+            <?php
+        }
+
+        renderCategoryBlock("Products", "product", $groups["product"]);
+        renderCategoryBlock("Ducted Installation", "ducted", $groups["ducted"]);
+        renderCategoryBlock("Split Installation", "split", $groups["split"]);
+        renderCategoryBlock("Personnel", "persons", $groups["persons"]);
+        renderCategoryBlock("Equipment", "equipments", $groups["equipments"]);
+        renderCategoryBlock("Other Expense", "additional", $groups["additional"]);
+        ?>
+
+    </div>
+
+    <!-- RIGHT: SUMMARY PANEL -->
+    <div class="col-span-4">
+        <div class="bg-white p-4 rounded-xl shadow border border-gray-200 sticky top-4">
+
+            <h3 class="text-lg font-semibold text-gray-700 mb-3">Order Summary</h3>
+
+            <div class="space-y-1 text-sm">
+                <p class="flex justify-between">
+                    <span>Products</span>
+                    <span><?= number_format($total_products, 2) ?></span>
+                </p>
+                <p class="flex justify-between">
+                    <span>Ducted Installation</span>
+                    <span><?= number_format($total_ducted, 2) ?></span>
+                </p>
+                <p class="flex justify-between">
+                    <span>Split Installation</span>
+                    <span><?= number_format($total_split, 2) ?></span>
+                </p>
+                <p class="flex justify-between">
+                    <span>Personnel</span>
+                    <span><?= number_format($total_personnel, 2) ?></span>
+                </p>
+                <p class="flex justify-between">
+                    <span>Equipment</span>
+                    <span><?= number_format($total_equip, 2) ?></span>
+                </p>
+                <p class="flex justify-between">
+                    <span>Other Expense</span>
+                    <span><?= number_format($total_additional, 2) ?></span>
+                </p>
+
+                <p class="font-bold text-lg border-t pt-2 flex justify-between">
+                    <span>Total</span>
+                    <span><?= number_format($grand_total, 2) ?></span>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+// Toggle add forms
+document.querySelectorAll(".addBtn").forEach(btn => {
+    btn.onclick = () => {
+        const target = document.getElementById(btn.dataset.target);
+        target.classList.toggle("hidden");
+    };
+});
+
+// AJAX add item
+document.querySelectorAll(".addItemForm").forEach(form => {
+    form.onsubmit = e => {
+        e.preventDefault();
+        const data = new FormData(form);
+        data.append("category", form.dataset.category);
+
+        fetch("partials/add_item.php", { method: "POST", body: data })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) location.reload();
+                else alert(res.message);
+            });
+    };
+});
 </script>
 
 <?php
-renderLayout("Edit Order #".$order_id, ob_get_clean(), "orders");
-?>
+$content = ob_get_clean();
+renderLayout("Edit Order", $content);
