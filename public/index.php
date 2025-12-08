@@ -122,10 +122,10 @@ ob_start();
             <p id="pmTotal"></p>
         </div>
         <div class="flex justify-between mt-6">
-            <form id="approveForm">
-    <input type="hidden" name="order_id" id="pmOrderId">
-    <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
-</form>
+            <form method="POST" action="/partials/update_status1.php">
+                <input type="hidden" name="order_id" id="pmOrderId">
+                <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
+            </form>
             <button id="pmClose" class="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400">Close</button>
         </div>
     </div>
@@ -156,6 +156,13 @@ ob_start();
     opacity: 1;
 }
 </style>
+<?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        alert('Order has been approved!');
+    });
+</script>
+<?php endif; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -195,43 +202,6 @@ document.addEventListener('DOMContentLoaded', function () {
         calendarModal.classList.remove('show');
         setTimeout(() => calendarModal.classList.add('hidden'), 300);
     });
-
-    //-- update status -- //
-   document.addEventListener('DOMContentLoaded', () => {
-    const approveForm = document.getElementById('approveForm');
-    const pendingModal = document.getElementById('pendingModal');
-    const pmContent = document.getElementById('pendingModalContent');
-
-    approveForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // prevent normal form submit
-
-        const formData = new FormData(approveForm);
-        formData.append('action', 'approve'); // your PHP expects 'action'
-
-        fetch('partials/update_status.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // Show popup
-                alert('Order approved successfully!');
-
-                // Close modal
-                pendingModal.classList.remove('show');
-                setTimeout(() => pendingModal.classList.add('hidden'), 300);
-
-                // Refresh page or update pending orders list dynamically
-                location.reload();
-            } else {
-                alert('Failed: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(err => alert('Error: ' + err));
-    });
-});
-
 
     // --- Pending Orders Modal ---
     const pendingItems = document.querySelectorAll('.pending-item');

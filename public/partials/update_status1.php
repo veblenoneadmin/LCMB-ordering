@@ -17,12 +17,12 @@ if ($order_id && $new_status) {
     $stmt_dispatch = $pdo->prepare("UPDATE dispatch SET status=? WHERE order_id=?");
     $stmt_dispatch->execute([$new_status, $order_id]);
 
-    echo json_encode([
-        'success' => true,
-        'updated_dispatch_rows' => $stmt_dispatch->rowCount()
-    ]);
+    // Redirect back to index.php with a flag
+    header("Location: ../index.php?approved=1");
     exit;
 }
 
-echo json_encode(['success' => false, 'message' => 'Missing order_id or status']);
+// Optional: redirect with error if missing data
+header("Location: ../index.php?approved=0");
+exit;
 ?>
