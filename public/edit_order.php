@@ -9,13 +9,13 @@ $order = $orderStmt->fetch(PDO::FETCH_ASSOC);
 
 // Fetch products, ducted, split, equipment, personnel
 $products = $pdo->query("SELECT * FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$split_installations = $pdo->query("SELECT * FROM split_installations ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$split_installations = $pdo->query("SELECT * FROM split_installation ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $equipment = $pdo->query("SELECT * FROM equipment ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $personnel = $pdo->query("SELECT * FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Optional: fetch ducted installations if table exists
 try {
-    $ducted_installations = $pdo->query("SELECT * FROM ductedinstallation ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $ducted_installations = $pdo->query("SELECT * FROM ductedinstallations ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
 } catch(PDOException $e){
     $ducted_installations = []; // leave empty if table missing
 }
