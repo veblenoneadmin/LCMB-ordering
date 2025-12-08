@@ -122,7 +122,7 @@ ob_start();
             <p id="pmTotal"></p>
         </div>
         <div class="flex justify-between mt-6">
-            <form method="POST" action="update_status.php">
+            <form method="POST" action="/partials/update_status.php">
                 <input type="hidden" name="order_id" id="pmOrderId">
                 <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
             </form>

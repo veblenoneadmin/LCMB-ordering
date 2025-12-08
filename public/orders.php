@@ -161,7 +161,7 @@ document.getElementById("cancelApprove").addEventListener("click", () => {
 // APPROVE BUTTON → AJAX CALL
 document.getElementById("confirmApprove").addEventListener("click", () => {
 
-    fetch("update_status.php", {
+    fetch("/partials/update_status.php", {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: `order_id=${selectedOrderId}&status=Approved`
