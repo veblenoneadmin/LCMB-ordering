@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData(approveForm);
         formData.append('action', 'approve'); // your PHP expects 'action'
 
-        fetch('/partials/update_status.php', {
+        fetch('partials/update_status.php', {
             method: 'POST',
             body: formData
         })
