@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Add 'action' for your PHP
         formData.append('action', 'approve');
 
-        fetch('partials/update_status.php', {
+        fetch('/partials/update_status.php', {
             method: 'POST',
             body: formData
         })
