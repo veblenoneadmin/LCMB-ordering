@@ -19,7 +19,7 @@ $itemStmt->execute([$order_id]);
 $items = $itemStmt->fetchAll();
 
 // Fetch ducted installation options
-$ductStmt = $pdo->query("SELECT * FROM ductedinstallation ORDER BY category ASC");
+$ductStmt = $pdo->query("SELECT * FROM ductedinstallations ORDER BY category ASC");
 $ductItems = $ductStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
