@@ -13,8 +13,10 @@ $stmt = $pdo->query("
     SELECT d.id, d.date, d.hours, p.name AS personnel_name
     FROM dispatch d
     LEFT JOIN personnel p ON p.id = d.personnel_id
+    WHERE d.status = 'approved'
 ");
 $dispatch = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 
 // Generate events array for JS
 $events = [];

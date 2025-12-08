@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../../config.php';
 
 // Get order_id and new status
 $order_id = intval($_POST['order_id'] ?? 0);
