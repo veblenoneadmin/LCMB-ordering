@@ -17,55 +17,60 @@ if ($order_id && $new_status) {
     $stmt_dispatch = $pdo->prepare("UPDATE dispatch SET status=? WHERE order_id=?");
     $stmt_dispatch->execute([$new_status, $order_id]);
 
-    // 3. If approved, send to N8N
+    // 3. If approved → send data to N8N
     if ($new_status === 'approved') {
-        // Fetch customer info
-        $stmt_order = $pdo->prepare("SELECT customer_name, job_address, appointment_date, hours FROM orders WHERE id=?");
-        $stmt_order->execute([$order_id]);
-        $order = $stmt_order->fetch(PDO::FETCH_ASSOC);
 
-        if ($order) {
-            // Fetch assigned personnel for this order
-            $stmt_personnel = $pdo->prepare("
-                SELECT p.name, p.email
-                FROM personnel p
-                JOIN order_items oi ON oi.item_id = p.id AND oi.item_category = 'personnel'
-                WHERE oi.order_id = ?
-            ");
-            $stmt_personnel->execute([$order_id]);
-            $technicians = $stmt_personnel->fetchAll(PDO::FETCH_ASSOC);
+        // Fetch all required data with proper joins
+        $stmt = $pdo->prepare("
+            SELECT 
+                o.customer_name,
+                o.job_address,
+                o.appointment_date AS date,
+                
+                p.name AS technician_name,
+                p.email AS technician_email,
+                
+                d.hours
+            FROM orders o
+            JOIN order_items oi 
+                ON oi.order_id = o.id 
+                AND oi.item_category = 'personnel'
+            JOIN personnel p 
+                ON p.id = oi.item_id
+            JOIN dispatch d
+                ON d.order_id = o.id 
+                AND d.personnel_id = p.id
+            WHERE o.id = ?
+        ");
+        $stmt->execute([$order_id]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $webhookUrl = "https://n8n.example.com/webhook/your-webhook-path"; // <-- replace with your N8N webhook URL
+        // Your actual N8N webhook URL
+        $webhookUrl = "https://primary-s0q-production.up.railway.app/webhook/4b01aa5b-c817-47a4-889a-30792ac9a92f";
 
-            foreach ($technicians as $tech) {
-                $data = [
-                    'customer_name' => $order['customer_name'],
-                    'job_address'   => $order['job_address'],
-                    'date'          => $order['appointment_date'],
-                    'hours'         => $order['hours'],
-                    'technician_name' => $tech['name'],
-                    'technician_email'=> $tech['email'],
-                    'order_id'      => $order_id
-                ];
+        foreach ($rows as $row) {
 
-                // Send POST to N8N webhook
-                $ch = curl_init($webhookUrl);
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                $response = curl_exec($ch);
-                curl_close($ch);
-            }
+            // Add order_id into payload
+            $row['order_id'] = $order_id;
+
+            // Send to n8n webhook
+            $ch = curl_init($webhookUrl);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($row));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+            $response = curl_exec($ch);
+            curl_close($ch);
         }
     }
 
-    // Redirect back to index.php with approved flag
+    // Redirect back to index.php with flag
     header("Location: ../index.php?approved=1");
     exit;
 }
 
-// Optional: redirect with error if missing data
+// If failed
 header("Location: ../index.php?approved=0");
 exit;
 ?>
