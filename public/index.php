@@ -147,45 +147,13 @@ ob_start();
     opacity: 1;
 }
 </style>
-
-<?php if (isset($_GET['approved']) && $_GET['approved'] == '1'): ?>
-<!-- Approved Modal (centered) -->
-<div id="approvedModal" class="fixed inset-0 z-50 flex items-center justify-center">
-  <div class="absolute inset-0 bg-black opacity-40"></div>
-  <div class="relative bg-white p-6 rounded-xl shadow-lg w-80 text-center">
-    <h2 class="text-lg font-semibold mb-2">Success</h2>
-    <p class="text-sm text-gray-700">Order has been approved!</p>
-    <div class="mt-4">
-      <button id="closeApprovedModal" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
-    </div>
-  </div>
-</div>
-
+<?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const modal = document.getElementById('approvedModal');
-  const btn = document.getElementById('closeApprovedModal');
-  if (!modal || !btn) return;
-
-  // Close handler: hide modal and remove ?approved=1 from URL
-  btn.addEventListener('click', function () {
-    // hide
-    modal.style.display = 'none';
-    // remove query param so refresh won't show again
-    if (history && history.replaceState) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('approved');
-      history.replaceState(null, '', url.pathname + url.search);
-    }
-  });
-
-  // optional: auto-focus the OK button for keyboard users
-  btn.focus();
-});
+    document.addEventListener('DOMContentLoaded', () => {
+        alert('Order has been approved!');
+    });
 </script>
 <?php endif; ?>
-
-
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
