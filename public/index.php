@@ -180,30 +180,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <?php endif; ?>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const modal = document.getElementById('approvedModal');
-  const btn = document.getElementById('closeApprovedModal');
-  if (!modal || !btn) return;
-
-  // Close handler: hide modal and remove ?approved=1 from URL
-  btn.addEventListener('click', function () {
-    // hide
-    modal.style.display = 'none';
-    // remove query param so refresh won't show again
-    if (history && history.replaceState) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('approved');
-      history.replaceState(null, '', url.pathname + url.search);
-    }
-  });
-
-  // optional: auto-focus the OK button for keyboard users
-  btn.focus();
-});
-</script>
-<?php endif; ?>
-
 <style>
 #calendarModal.show #calendarModalContent,
 #pendingModal.show #pendingModalContent {
