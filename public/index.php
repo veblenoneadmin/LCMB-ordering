@@ -187,13 +187,6 @@ document.addEventListener('DOMContentLoaded', function () {
     opacity: 1;
 }
 </style>
-<?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        alert('Order has been approved!');
-    });
-</script>
-<?php endif; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
