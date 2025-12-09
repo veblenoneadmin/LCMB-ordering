@@ -13,7 +13,12 @@ if (!$order) {
 
 // Fetch data from tables
 $products = $pdo->query("SELECT * FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$ducted_installation = $pdo->query("SELECT * FROM ductedinstallation ORDER BY equipment_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$ducted_installations = $pdo->query("
+    SELECT id, equipment_name, total_cost, category
+    FROM ductedinstallations
+    ORDER BY equipment_name ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $split_installations = $pdo->query("SELECT * FROM split_installations ORDER BY item_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $equipment = $pdo->query("SELECT * FROM equipment ORDER BY item ASC")->fetchAll(PDO::FETCH_ASSOC);
 $personnel = $pdo->query("SELECT * FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -156,24 +161,32 @@ $personnel = $pdo->query("SELECT * FROM personnel ORDER BY name ASC")->fetchAll(
       </thead>
       <tbody>
         <?php foreach($ducted_installations as $d): $did=(int)$d['id']; ?>
-        <tr>
-          <td><?= htmlspecialchars($d['name']) ?></td>
-          <td class="text-center">$<?= number_format($d['price'],2) ?></td>
-          <td class="text-center">
-            <div class="flex justify-center gap-1">
-              <button type="button" @click="changeQty($event,-1)">-</button>
-              <input type="number" min="0" value="0" class="qty-input" data-price="<?= $d['price'] ?>" @input="updateSubtotal($event)">
-              <button type="button" @click="changeQty($event,1)">+</button>
-            </div>
-          </td>
-          <td class="text-center">
-            <select>
-              <option value="indoor">Indoor</option>
-              <option value="outdoor">Outdoor</option>
-            </select>
-          </td>
-          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
-        </tr>
+       <tr>
+    <td><?= htmlspecialchars($d['equipment_name']) ?></td>
+
+    <td class="text-center">
+        <select name="ducted[<?= $did ?>][type]" class="installation-type">
+            <option value="indoor">Indoor</option>
+            <option value="outdoor">Outdoor</option>
+        </select>
+    </td>
+
+    <td class="text-center">
+        <div class="qty-wrapper">
+            <button type="button" class="qtbn ducted-minus">-</button>
+            <input type="number" min="0" value="0" 
+                   name="ducted[<?= $did ?>][qty]" 
+                   class="qty-input ducted-qty"
+                   data-price="<?= htmlspecialchars($d['total_cost']) ?>">
+            <button type="button" class="qtbn ducted-plus">+</button>
+        </div>
+    </td>
+
+    <td class="text-center">$<?= number_format($d['total_cost'],2) ?></td>
+
+    <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+</tr>
+
         <?php endforeach; ?>
       </tbody>
     </table>
