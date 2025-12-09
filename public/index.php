@@ -167,6 +167,24 @@ document.addEventListener('DOMContentLoaded', function () {
   const modal = document.getElementById('approvedModal');
   const btn = document.getElementById('closeApprovedModal');
   if (!modal || !btn) return;
+  btn.addEventListener('click', function () {
+    modal.style.display = 'none';
+    if (history && history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('approved');
+      history.replaceState(null, '', url.pathname + url.search);
+    }
+  });
+  btn.focus();
+});
+</script>
+<?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('approvedModal');
+  const btn = document.getElementById('closeApprovedModal');
+  if (!modal || !btn) return;
 
   // Close handler: hide modal and remove ?approved=1 from URL
   btn.addEventListener('click', function () {
