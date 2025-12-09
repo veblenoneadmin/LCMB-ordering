@@ -147,6 +147,7 @@ ob_start();
     opacity: 1;
 }
 </style>
+
 <?php if (isset($_GET['approved']) && $_GET['approved'] == '1'): ?>
 <!-- Approved Modal (centered) -->
 <div id="approvedModal" class="fixed inset-0 z-50 flex items-center justify-center">
