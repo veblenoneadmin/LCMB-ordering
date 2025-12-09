@@ -147,23 +147,43 @@ ob_start();
     opacity: 1;
 }
 </style>
-<?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
-<div id="approvedModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-xl shadow-lg w-80 text-center">
-        <h2 class="text-lg font-semibold mb-2">Success</h2>
-        <p>Order has been approved!</p>
-        <button id="closeApprovedModal" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
+<?php if (isset($_GET['approved']) && $_GET['approved'] == '1'): ?>
+<!-- Approved Modal (centered) -->
+<div id="approvedModal" class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black opacity-40"></div>
+  <div class="relative bg-white p-6 rounded-xl shadow-lg w-80 text-center">
+    <h2 class="text-lg font-semibold mb-2">Success</h2>
+    <p class="text-sm text-gray-700">Order has been approved!</p>
+    <div class="mt-4">
+      <button id="closeApprovedModal" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
     </div>
+  </div>
 </div>
+
 <script>
-    document.getElementById('closeApprovedModal').onclick = () => {
-        const modal = document.getElementById('approvedModal');
-        modal.style.display = 'none';
-        // Remove query string to avoid showing again on refresh
-        history.replaceState(null, '', window.location.pathname);
-    };
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('approvedModal');
+  const btn = document.getElementById('closeApprovedModal');
+  if (!modal || !btn) return;
+
+  // Close handler: hide modal and remove ?approved=1 from URL
+  btn.addEventListener('click', function () {
+    // hide
+    modal.style.display = 'none';
+    // remove query param so refresh won't show again
+    if (history && history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('approved');
+      history.replaceState(null, '', url.pathname + url.search);
+    }
+  });
+
+  // optional: auto-focus the OK button for keyboard users
+  btn.focus();
+});
 </script>
 <?php endif; ?>
+
 
 
 <script>
