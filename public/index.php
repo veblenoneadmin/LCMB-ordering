@@ -190,7 +190,19 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   btn.focus();
 });
+// Open modal example
+function openApprovedModal() {
+  const modal = document.getElementById('approvedModal');
+  modal.classList.remove('hidden');
+}
+
+// Close modal
+document.getElementById('closeApprovedModal').addEventListener('click', () => {
+  const modal = document.getElementById('approvedModal');
+  modal.classList.add('hidden');
+});
 </script>
+
 <?php endif; ?>
 
 <style>
