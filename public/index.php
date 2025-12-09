@@ -151,13 +151,26 @@ ob_start();
 
 <?php if (isset($_GET['approved']) && $_GET['approved'] == '1'): ?>
 <!-- Approved Modal (centered) -->
-<div id="approvedModal" class="fixed inset-0 z-50 flex items-center justify-center">
-  <div class="absolute inset-0 bg-black opacity-40"></div>
-  <div class="relative bg-white p-6 rounded-xl shadow-lg w-80 text-center">
-    <h2 class="text-lg font-semibold mb-2">Success</h2>
-    <p class="text-sm text-gray-700">Order has been approved!</p>
-    <div class="mt-4">
-      <button id="closeApprovedModal" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
+<div id="approvedModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+  <!-- Background overlay -->
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+  <!-- Modal card -->
+  <div class="relative bg-white rounded-2xl shadow-xl w-80 max-w-full p-6 text-center transform transition-transform scale-95 opacity-0 animate-modal-in">
+    <!-- Icon / Success indicator -->
+    <div class="flex items-center justify-center mb-4">
+      <span class="material-icons text-green-500 text-5xl animate-bounce">check_circle</span>
+    </div>
+    
+    <!-- Title -->
+    <h2 class="text-xl font-semibold text-gray-800 mb-2">Success</h2>
+    <p class="text-sm text-gray-600">Order has been approved!</p>
+
+    <!-- Button -->
+    <div class="mt-6">
+      <button id="closeApprovedModal" class="px-6 py-2 bg-green-500 text-white font-medium rounded-xl shadow-md hover:bg-green-600 transition-colors duration-200">
+        OK
+      </button>
     </div>
   </div>
 </div>
@@ -185,6 +198,14 @@ document.addEventListener('DOMContentLoaded', function () {
 #pendingModal.show #pendingModalContent {
     transform: scale(1);
     opacity: 1;
+}
+@keyframes modalIn {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.2s ease-out forwards;
 }
 </style>
 
