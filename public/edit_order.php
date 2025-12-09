@@ -1,265 +1,309 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config.php'; // Make sure this path exists
 
-// Fetch order data
 $order_id = $_GET['order_id'] ?? 0;
-$orderStmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
-$orderStmt->execute([$order_id]);
-$order = $orderStmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch products, ducted, split, equipment, personnel
+// Fetch order
+$stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+$stmt->execute([$order_id]);
+$order = $stmt->fetch();
+if (!$order) {
+    die("❌ Order not found.");
+}
+
+// Fetch data from tables
 $products = $pdo->query("SELECT * FROM products ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$ducted_installations = $pdo->query("SELECT * FROM ductedinstallations ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $split_installations = $pdo->query("SELECT * FROM split_installation ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $equipment = $pdo->query("SELECT * FROM equipment ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $personnel = $pdo->query("SELECT * FROM personnel ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-
-// Optional: fetch ducted installations if table exists
-try {
-    $ducted_installations = $pdo->query("SELECT * FROM ductedinstallations ORDER BY category ASC")->fetchAll(PDO::FETCH_ASSOC);
-} catch(PDOException $e){
-    $ducted_installations = []; // leave empty if table missing
-}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Edit Order</title>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+<title>Edit Order #<?= htmlspecialchars($order_id) ?></title>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <style>
-thead.sticky th { top: 0; position: sticky; background: #f3f4f6; z-index:10; }
-.qty-wrapper { display:flex; justify-content:center; gap:0.25rem; align-items:center; }
-.qty-wrapper input { width:3rem; text-align:center; }
-.qbtn { padding:0.5rem 1rem; background:#3b82f6; color:white; border-radius:0.5rem; cursor:pointer; margin-top:0.5rem; }
-.summary-panel { min-width:20rem; background:white; padding:1rem; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-.row-subtotal, .pers-subtotal, .expense-subtotal { min-width:3rem; display:inline-block; text-align:right; }
+/* Minimal styling */
+.bg-white { background-color: white; }
+.rounded-xl { border-radius: 1rem; }
+.shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.border { border: 1px solid #e2e8f0; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.p-4 { padding: 1rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.font-medium { font-weight: 500; }
+.text-gray-700 { color: #4a5568; }
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.max-h-64 { max-height: 16rem; overflow-y: auto; }
+.products-table input { width: 3rem; text-align: center; }
+.summary-panel { width: 20rem; }
+.grid-cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid { display: grid; }
+.gap-6 { gap: 1.5rem; }
+.qbtn { padding: 0.5rem 1rem; background-color:#3b82f6; color:white; border:none; border-radius:0.5rem; cursor:pointer;}
+.qbtn:hover { background-color:#2563eb;}
 </style>
 </head>
-<body class="bg-gray-100 p-6">
-
+<body>
 <div class="flex gap-6">
 
-  <!-- LEFT COLUMN -->
-  <div class="flex-1 space-y-6">
+<!-- LEFT SIDE: FORM -->
+<div class="flex-1 space-y-6">
 
-    <!-- CLIENT INFO -->
-    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-      <h5 class="text-lg font-medium text-gray-700 mb-4">Client Information</h5>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="relative">
-          <input type="text" name="customer_name" id="customer_name" placeholder=" " value="<?= htmlspecialchars($order['customer_name'] ?? '') ?>"
-                 class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition" required>
-          <label for="customer_name" class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">Name</label>
-        </div>
-        <div class="relative">
-          <input type="email" name="customer_email" id="customer_email" placeholder=" " value="<?= htmlspecialchars($order['customer_email'] ?? '') ?>"
-                 class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
-          <label for="customer_email" class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">Email</label>
-        </div>
-        <div class="relative">
-          <input type="text" name="contact_number" id="contact_number" placeholder=" " value="<?= htmlspecialchars($order['contact_number'] ?? '') ?>"
-                 class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
-          <label for="contact_number" class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">Phone</label>
-        </div>
-        <div class="relative">
-          <input type="text" name="job_address" id="job_address" placeholder=" " value="<?= htmlspecialchars($order['job_address'] ?? '') ?>"
-                 class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
-          <label for="job_address" class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">Address</label>
-        </div>
-        <div class="relative">
-          <input type="date" name="appointment_date" id="appointment_date" value="<?= htmlspecialchars($order['appointment_date'] ?? date('Y-m-d')) ?>" 
-                 class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
-          <label for="appointment_date" class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">Appointment Date</label>
-        </div>
-      </div>
+<!-- CLIENT INFO -->
+<div class="bg-white p-6 rounded-xl shadow border border-gray-200">
+  <h5 class="text-lg font-medium text-gray-700 mb-4">Client Information</h5>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="relative">
+      <input type="text" name="customer_name" id="customer_name" placeholder=" " 
+             value="<?= htmlspecialchars($order['customer_name']) ?>"
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition" required>
+      <label for="customer_name" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
+        Name
+      </label>
     </div>
-
-    <!-- CARD TEMPLATE FUNCTION -->
-    <?php
-    function renderCard($title, $items, $nameAttr, $priceField='price', $qtyField='qty', $typeSelect=false) {
-      ?>
-      <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-medium text-gray-700"><?= $title ?></span>
-          <input type="text" class="search-input" placeholder="Search...">
-        </div>
-        <div class="overflow-y-auto max-h-64 border rounded-lg mb-2">
-          <table class="w-full border-collapse text-sm">
-            <thead class="bg-gray-100 sticky top-0">
-              <tr>
-                <th>Name</th>
-                <th class="text-center">Price</th>
-                <th class="text-center">Qty</th>
-                <?php if($typeSelect) echo '<th class="text-center">Type</th>'; ?>
-                <th class="text-center">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-            <?php foreach($items as $i): $id=(int)$i['id']; ?>
-              <tr>
-                <td><?= htmlspecialchars($i['name']) ?></td>
-                <td class="text-center">$<span class="prod-price"><?= number_format($i[$priceField],2) ?></span></td>
-                <td class="text-center">
-                  <div class="qty-wrapper">
-                    <button type="button" class="qtbn minus">-</button>
-                    <input type="number" min="0" value="0" name="<?= $nameAttr ?>[<?= $id ?>]" class="qty-input" data-price="<?= htmlspecialchars($i[$priceField]) ?>">
-                    <button type="button" class="qtbn plus">+</button>
-                  </div>
-                </td>
-                <?php if($typeSelect): ?>
-                <td class="text-center">
-                  <select name="<?= $nameAttr ?>[<?= $id ?>][type]">
-                    <option value="indoor">Indoor</option>
-                    <option value="outdoor">Outdoor</option>
-                  </select>
-                </td>
-                <?php endif; ?>
-                <td class="text-center">$<span class="row-subtotal">0.00</span></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-        <button type="button" class="qbtn add-item-btn">Add Item</button>
-        <div class="added-items mt-2"></div>
-      </div>
-    <?php } ?>
-
-    <!-- RENDER CARDS -->
-    <?php renderCard('Products',$products,'product'); ?>
-    <?php renderCard('Ducted Installations',$ducted_installations,'ducted','price','qty',true); ?>
-    <?php renderCard('Split Installations',$split_installations,'split'); ?>
-    <?php renderCard('Equipment',$equipment,'equipment','rate'); ?>
-
-    <!-- PERSONNEL -->
-    <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-      <div class="flex items-center justify-between mb-3">
-        <span class="font-medium text-gray-700">Personnel</span>
-        <input type="text" class="search-input" placeholder="Search personnel...">
-      </div>
-      <div class="overflow-y-auto max-h-64 border rounded-lg mb-2">
-        <table class="w-full text-sm border-collapse">
-          <thead class="bg-gray-100 sticky top-0">
-            <tr><th>Name</th><th>Rate</th><th>Date</th><th>Hours</th><th>Subtotal</th></tr>
-          </thead>
-          <tbody>
-          <?php foreach($personnel as $p): $pid=(int)$p['id']; ?>
-            <tr>
-              <td><?= htmlspecialchars($p['name']) ?></td>
-              <td class="text-center pers-rate"><?= number_format($p['rate'],2) ?></td>
-              <td class="text-center"><input type="text" name="personnel_date[<?= $pid ?>]" class="personnel-date w-full text-center" placeholder="YYYY-MM-DD"></td>
-              <td class="text-center">
-                <div class="qty-wrapper">
-                  <button type="button" class="qtbn hour-minus">-</button>
-                  <input type="number" min="0" value="0" name="personnel_hours[<?= $pid ?>]" class="qty-input pers-hours" data-rate="<?= $p['rate'] ?>">
-                  <button type="button" class="qtbn hour-plus">+</button>
-                </div>
-              </td>
-              <td class="text-center">$<span class="pers-subtotal">0.00</span></td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
+    <div class="relative">
+      <input type="email" name="customer_email" id="customer_email" placeholder=" " 
+             value="<?= htmlspecialchars($order['customer_email']) ?>"
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="customer_email" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
+        Email
+      </label>
     </div>
-
-    <!-- OTHER EXPENSES -->
-    <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
-      <span class="font-medium text-gray-700 mb-2">Other Expenses</span>
-      <div id="otherExpensesContainer" class="mb-2"></div>
-      <button type="button" class="qbtn" id="addExpenseBtn">Add Expense</button>
+    <div class="relative">
+      <input type="text" name="contact_number" id="contact_number" placeholder=" " 
+             value="<?= htmlspecialchars($order['contact_number']) ?>"
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="contact_number" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
+        Phone
+      </label>
     </div>
-
-  </div> <!-- END LEFT COLUMN -->
-
-  <!-- RIGHT COLUMN / SUMMARY PANEL -->
-  <div class="summary-panel sticky top-6 h-fit">
-    <h5 class="text-lg font-medium text-gray-700 mb-4">Summary</h5>
-    <div class="space-y-2">
-      <div class="flex justify-between"><span>Products</span><span id="sumProducts">$0.00</span></div>
-      <div class="flex justify-between"><span>Ducted</span><span id="sumDucted">$0.00</span></div>
-      <div class="flex justify-between"><span>Split</span><span id="sumSplit">$0.00</span></div>
-      <div class="flex justify-between"><span>Equipment</span><span id="sumEquipment">$0.00</span></div>
-      <div class="flex justify-between"><span>Personnel</span><span id="sumPersonnel">$0.00</span></div>
-      <div class="flex justify-between"><span>Other Expenses</span><span id="sumOther">$0.00</span></div>
-      <hr>
-      <div class="flex justify-between font-bold"><span>Total</span><span id="totalSum">$0.00</span></div>
+    <div class="relative">
+      <input type="text" name="job_address" id="job_address" placeholder=" " 
+             value="<?= htmlspecialchars($order['job_address']) ?>"
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="job_address" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
+        Address
+      </label>
+    </div>
+    <div class="relative">
+      <input type="date" name="appointment_date" id="appointment_date" 
+             value="<?= htmlspecialchars($order['appointment_date'] ?? date('Y-m-d')) ?>"
+             class="peer h-12 w-full border border-gray-300 rounded-xl bg-gray-50 px-4 pt-4 pb-1 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+      <label for="appointment_date" 
+             class="absolute left-4 top-1 text-gray-500 text-sm transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base peer-focus:top-1 peer-focus:text-gray-700 peer-focus:text-sm">
+        Appointment Date
+      </label>
     </div>
   </div>
+</div>
 
-</div> <!-- END FLEX CONTAINER -->
+<!-- DYNAMIC TABLE FUNCTIONALITY -->
+<div x-data="orderData()">
+
+<!-- PRODUCTS -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Products</span>
+    <input id="productSearch" placeholder="Search products..." class="border px-2 py-1 rounded">
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg mb-3">
+    <table class="products-table w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr><th>Name</th><th class="text-center">Price</th><th class="text-center">Qty</th><th class="text-center">Subtotal</th></tr>
+      </thead>
+      <tbody>
+        <?php foreach($products as $p): $pid=(int)$p['id']; ?>
+        <tr>
+          <td><?= htmlspecialchars($p['name']) ?></td>
+          <td class="text-center">$<span><?= number_format($p['price'],2) ?></span></td>
+          <td class="text-center">
+            <div class="flex items-center justify-center gap-1">
+              <button type="button" @click="changeQty($event,-1)">-</button>
+              <input type="number" min="0" value="0" class="qty-input" data-price="<?= $p['price'] ?>" @input="updateSubtotal($event)">
+              <button type="button" @click="changeQty($event,1)">+</button>
+            </div>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="qbtn mb-2" @click="addItem('Products')">Add Item</button>
+  <div id="addedProducts"></div>
+</div>
+
+<!-- Ducted Installations -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200 mt-4">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Ducted Installations</span>
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg mb-3">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0">
+        <tr><th>Name</th><th class="text-center">Price</th><th class="text-center">Qty</th><th class="text-center">Type</th><th class="text-center">Subtotal</th></tr>
+      </thead>
+      <tbody>
+        <?php foreach($ducted_installations as $d): $did=(int)$d['id']; ?>
+        <tr>
+          <td><?= htmlspecialchars($d['name']) ?></td>
+          <td class="text-center">$<?= number_format($d['price'],2) ?></td>
+          <td class="text-center">
+            <div class="flex justify-center gap-1">
+              <button type="button" @click="changeQty($event,-1)">-</button>
+              <input type="number" min="0" value="0" class="qty-input" data-price="<?= $d['price'] ?>" @input="updateSubtotal($event)">
+              <button type="button" @click="changeQty($event,1)">+</button>
+            </div>
+          </td>
+          <td class="text-center">
+            <select>
+              <option value="indoor">Indoor</option>
+              <option value="outdoor">Outdoor</option>
+            </select>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="qbtn mb-2" @click="addItem('Ducted')">Add Item</button>
+  <div id="addedDucted"></div>
+</div>
+
+<!-- Split Installations -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200 mt-4">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Split Installations</span>
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg mb-3">
+    <table class="w-full text-sm border-collapse">
+      <thead><tr><th>Name</th><th class="text-center">Price</th><th class="text-center">Qty</th><th class="text-center">Subtotal</th></tr></thead>
+      <tbody>
+        <?php foreach($split_installations as $s): $sid=(int)$s['id']; ?>
+        <tr>
+          <td><?= htmlspecialchars($s['name']) ?></td>
+          <td class="text-center">$<?= number_format($s['price'],2) ?></td>
+          <td class="text-center">
+            <div class="flex justify-center gap-1">
+              <button type="button" @click="changeQty($event,-1)">-</button>
+              <input type="number" min="0" value="0" class="qty-input" data-price="<?= $s['price'] ?>" @input="updateSubtotal($event)">
+              <button type="button" @click="changeQty($event,1)">+</button>
+            </div>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="qbtn mb-2" @click="addItem('Split')">Add Item</button>
+  <div id="addedSplit"></div>
+</div>
+
+<!-- Equipment -->
+<div class="bg-white p-4 rounded-xl shadow border border-gray-200 mt-4">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-medium text-gray-700">Equipment</span>
+  </div>
+  <div class="overflow-y-auto max-h-64 border rounded-lg mb-3">
+    <table class="w-full text-sm border-collapse">
+      <thead><tr><th>Item</th><th class="text-center">Price</th><th class="text-center">Qty</th><th class="text-center">Subtotal</th></tr></thead>
+      <tbody>
+        <?php foreach($equipment as $e): $eid=(int)$e['id']; ?>
+        <tr>
+          <td><?= htmlspecialchars($e['name']) ?></td>
+          <td class="text-center">$<?= number_format($e['rate'],2) ?></td>
+          <td class="text-center">
+            <div class="flex justify-center gap-1">
+              <button type="button" @click="changeQty($event,-1)">-</button>
+              <input type="number" min="0" value="0" class="qty-input" data-price="<?= $e['rate'] ?>" @input="updateSubtotal($event)">
+              <button type="button" @click="changeQty($event,1)">+</button>
+            </div>
+          </td>
+          <td class="text-center">$<span class="row-subtotal">0.00</span></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="qbtn mb-2" @click="addItem('Equipment')">Add Item</button>
+  <div id="addedEquipment"></div>
+</div>
+
+</div> <!-- End x-data -->
+
+<!-- RIGHT SIDE: SUMMARY -->
+<div class="summary-panel bg-white p-4 rounded-xl shadow border border-gray-200">
+  <h5 class="text-lg font-medium text-gray-700 mb-4">Summary</h5>
+  <div>
+    <p>Total Products: $<span id="totalProducts">0.00</span></p>
+    <p>Total Ducted: $<span id="totalDucted">0.00</span></p>
+    <p>Total Split: $<span id="totalSplit">0.00</span></p>
+    <p>Total Equipment: $<span id="totalEquipment">0.00</span></p>
+    <hr>
+    <p><strong>Grand Total: $<span id="grandTotal">0.00</span></strong></p>
+  </div>
+</div>
 
 <script>
-$(document).ready(function(){
-
-  function updateSubtotal(input){
-    var price = parseFloat($(input).data('price') || 0);
-    var qty = parseFloat($(input).val() || 0);
-    $(input).closest('tr').find('.row-subtotal, .pers-subtotal, .expense-subtotal').text((price*qty).toFixed(2));
-    updateSummary();
-  }
-
-  function updateSummary(){
-    let sumProducts=0,sumDucted=0,sumSplit=0,sumEquipment=0,sumPersonnel=0,sumOther=0;
-    $('.products-table .row-subtotal').each(function(){ sumProducts+=parseFloat($(this).text()); });
-    $('.bg-white:contains("Ducted Installations") .row-subtotal').each(function(){ sumDucted+=parseFloat($(this).text()); });
-    $('.bg-white:contains("Split Installations") .row-subtotal').each(function(){ sumSplit+=parseFloat($(this).text()); });
-    $('.bg-white:contains("Equipment") .row-subtotal').each(function(){ sumEquipment+=parseFloat($(this).text()); });
-    $('.pers-subtotal').each(function(){ sumPersonnel+=parseFloat($(this).text()); });
-    $('.expense-subtotal').each(function(){ sumOther+=parseFloat($(this).text()); });
-    $('#sumProducts').text('$'+sumProducts.toFixed(2));
-    $('#sumDucted').text('$'+sumDucted.toFixed(2));
-    $('#sumSplit').text('$'+sumSplit.toFixed(2));
-    $('#sumEquipment').text('$'+sumEquipment.toFixed(2));
-    $('#sumPersonnel').text('$'+sumPersonnel.toFixed(2));
-    $('#sumOther').text('$'+sumOther.toFixed(2));
-    let total=sumProducts+sumDucted+sumSplit+sumEquipment+sumPersonnel+sumOther;
-    $('#totalSum').text('$'+total.toFixed(2));
-  }
-
-  // Quantity controls
-  $('.qty-input').on('input change', function(){ updateSubtotal(this); });
-  $('.plus').click(function(){ var inp=$(this).siblings('input'); inp.val(parseInt(inp.val())+1).trigger('change'); });
-  $('.minus').click(function(){ var inp=$(this).siblings('input'); inp.val(Math.max(0,parseInt(inp.val())-1)).trigger('change'); });
-  $('.hour-plus').click(function(){ var inp=$(this).siblings('input'); inp.val(parseInt(inp.val())+1).trigger('change'); });
-  $('.hour-minus').click(function(){ var inp=$(this).siblings('input'); inp.val(Math.max(0,parseInt(inp.val())-1)).trigger('change'); });
-
-  // Add Item dynamically
-  $('.add-item-btn').click(function(){
-    var container=$(this).siblings('.added-items');
-    var row=`<div class="flex gap-2 mt-1">
-      <input type="text" class="border rounded px-2 py-1 w-1/2" placeholder="Item Name">
-      <input type="number" class="border rounded px-2 py-1 w-1/4" placeholder="Price">
-      <input type="number" class="border rounded px-2 py-1 w-1/4" placeholder="Qty">
-      </div>`;
-    container.append(row);
-  });
-
-  // Add Expense dynamically
-  $('#addExpenseBtn').click(function(){
-    var container=$('#otherExpensesContainer');
-    var row=`<div class="flex gap-2 mt-1">
-      <input type="text" class="border rounded px-2 py-1 w-1/2" placeholder="Expense Name">
-      <input type="number" class="border rounded px-2 py-1 w-1/4 expense-price" placeholder="Price">
-      <input type="number" class="border rounded px-2 py-1 w-1/4 expense-qty" placeholder="Qty">
-      <span class="expense-subtotal">$0.00</span>
-    </div>`;
-    container.append(row);
-  });
-
-  // Update expense subtotal on input
-  $(document).on('input','.expense-price, .expense-qty', function(){
-    var row=$(this).parent();
-    var price=parseFloat(row.find('.expense-price').val()||0);
-    var qty=parseFloat(row.find('.expense-qty').val()||0);
-    row.find('.expense-subtotal').text('$'+(price*qty).toFixed(2));
-    updateSummary();
-  });
-
-});
+function orderData() {
+    return {
+        addItem(category) {
+            const container = document.getElementById(`added${category}`);
+            const div = document.createElement('div');
+            div.classList.add('mb-2','flex','gap-2');
+            div.innerHTML = `<input type="text" placeholder="Item Name" class="border p-1">
+                             <input type="number" placeholder="Price" class="border p-1">`;
+            container.appendChild(div);
+        },
+        changeQty(event, delta) {
+            const input = event.target.closest('div').querySelector('input');
+            let val = parseInt(input.value) + delta;
+            if(val < 0) val = 0;
+            input.value = val;
+            this.updateSubtotal(input);
+        },
+        updateSubtotal(input) {
+            const row = input.closest('tr');
+            const price = parseFloat(input.dataset.price) || 0;
+            const qty = parseFloat(input.value) || 0;
+            row.querySelector('.row-subtotal span').textContent = (price*qty).toFixed(2);
+            this.updateSummary();
+        },
+        updateSummary() {
+            // Simple sum of all .row-subtotal
+            const totals = {Products:0,Ducted:0,Split:0,Equipment:0};
+            ['Products','Ducted','Split','Equipment'].forEach(cat=>{
+                document.querySelectorAll(`#added${cat} input[type=number]`).forEach(i=>{
+                    totals[cat]+=parseFloat(i.value)||0;
+                });
+                document.querySelectorAll(`#added${cat}`).forEach(e=>{
+                    e.querySelectorAll('.row-subtotal span').forEach(s=>{
+                        totals[cat]+=parseFloat(s.textContent)||0;
+                    });
+                });
+            });
+            document.getElementById('totalProducts').textContent = totals.Products.toFixed(2);
+            document.getElementById('totalDucted').textContent = totals.Ducted.toFixed(2);
+            document.getElementById('totalSplit').textContent = totals.Split.toFixed(2);
+            document.getElementById('totalEquipment').textContent = totals.Equipment.toFixed(2);
+            const grand = totals.Products+totals.Ducted+totals.Split+totals.Equipment;
+            document.getElementById('grandTotal').textContent = grand.toFixed(2);
+        }
+    }
+}
 </script>
-
 </body>
 </html>

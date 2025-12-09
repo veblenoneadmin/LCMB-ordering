@@ -113,21 +113,12 @@ ob_start();
 </div>
 
 <!-- Pending Order Modal -->
-<div id="pendingModal" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm hidden flex items-center justify-center z-50 h-screen">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-96 transform scale-95 opacity-0 transition-all duration-300" id="pendingModalContent">
-        <h2 class="text-xl font-bold text-gray-800 mb-3">Order Details</h2>
-        <div class="space-y-2 text-gray-700">
-            <p id="pmCustomer"></p>
-            <p id="pmItems"></p>
-            <p id="pmTotal"></p>
-        </div>
-        <div class="flex justify-between mt-6">
-            <form method="POST" action="/partials/update_status1.php">
-                <input type="hidden" name="order_id" id="pmOrderId">
-                <button name="action" value="approve" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
-            </form>
-            <button id="pmClose" class="px-4 py-2 rounded-lg bg-gray-300 text-gray-700 hover:bg-gray-400">Close</button>
-        </div>
+<?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
+<div id="approvedModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl shadow-lg w-80 text-center">
+        <h2 class="text-lg font-semibold mb-2">Success</h2>
+        <p>Order has been approved!</p>
+        <button id="closeApprovedModal" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
     </div>
 </div>
 
@@ -157,12 +148,23 @@ ob_start();
 }
 </style>
 <?php if (isset($_GET['approved']) && $_GET['approved'] == 1): ?>
+<div id="approvedModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl shadow-lg w-80 text-center">
+        <h2 class="text-lg font-semibold mb-2">Success</h2>
+        <p>Order has been approved!</p>
+        <button id="closeApprovedModal" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">OK</button>
+    </div>
+</div>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        alert('Order has been approved!');
-    });
+    document.getElementById('closeApprovedModal').onclick = () => {
+        const modal = document.getElementById('approvedModal');
+        modal.style.display = 'none';
+        // Remove query string to avoid showing again on refresh
+        history.replaceState(null, '', window.location.pathname);
+    };
 </script>
 <?php endif; ?>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
