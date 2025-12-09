@@ -505,7 +505,6 @@ ob_start();
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-<!-- JS (inline) -->
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
@@ -537,17 +536,14 @@ document.addEventListener("DOMContentLoaded", function(){
   function updateSummary(){
       let subtotal = 0;
 
-      // items subtotal
       document.querySelectorAll(".row-subtotal, .pers-subtotal").forEach(el => {
           subtotal += parseFloatSafe(el.textContent);
       });
 
-      // other expenses
       document.querySelectorAll("input[name='other_expense_amount[]']").forEach(inp => {
           subtotal += parseFloatSafe(inp.value);
       });
 
-      // tax + grand
       const tax = subtotal * 0.10;
       const grand = subtotal + tax;
 
@@ -555,11 +551,9 @@ document.addEventListener("DOMContentLoaded", function(){
       document.getElementById("taxDisplay").textContent = fmt(tax);
       document.getElementById("grandDisplay").textContent = fmt(grand);
 
-      // summary list
       const summaryEl = document.getElementById("orderSummary");
       summaryEl.innerHTML = "";
 
-      // normal items
       document.querySelectorAll("tr").forEach(row => {
           const name = row.querySelector("td")?.textContent?.trim();
           const subEl = row.querySelector(".row-subtotal, .pers-subtotal");
@@ -584,7 +578,6 @@ document.addEventListener("DOMContentLoaded", function(){
           summaryEl.appendChild(div);
       });
 
-      // other expenses
       document.querySelectorAll("input[name='other_expense_name[]']").forEach((nameInput, i) => {
           const amountInput = document.querySelectorAll("input[name='other_expense_amount[]']")[i];
           const name = nameInput.value.trim();
@@ -604,27 +597,49 @@ document.addEventListener("DOMContentLoaded", function(){
           summaryEl.innerHTML = "<div class='empty-note'>No items selected.</div>";
   }
 
-  // +/- buttons
+  /* -------------------------------------------------
+     FIX #1: UNIVERSAL + / - BUTTON HANDLER
+     Works for: Split, Ducted, Equipment, Personnel
+  ---------------------------------------------------*/
   document.querySelectorAll(".qtbn").forEach(btn => {
       btn.addEventListener("click", () => {
-          const input = btn.closest("td, div").querySelector("input");
+
+          // find nearest quantity input
+          const input =
+              btn.parentElement.querySelector("input") ||
+              btn.closest("tr").querySelector(".qty-input, .pers-hours");
+
           if(!input) return;
+
           let val = parseFloatSafe(input.value);
+
           if(btn.classList.contains("plus")) val++;
-          else if(btn.classList.contains("minus")) val = Math.max(0, val-1);
+          else if(btn.classList.contains("minus")) val = Math.max(0, val - 1);
+
           input.value = val;
+
           updateRowSubtotal(input.closest("tr"));
           updateSummary();
       });
   });
 
-  // qty input direct
-  document.querySelectorAll(".qty-input").forEach(input => {
+  // qty + personnel hours direct input
+  document.querySelectorAll(".qty-input, .pers-hours").forEach(input => {
       input.addEventListener("input", () => {
           updateRowSubtotal(input.closest("tr"));
           updateSummary();
       });
   });
+
+  /* -------------------------------------------------
+     FIX #2: PERSONNEL DATE PICKER INIT
+  ---------------------------------------------------*/
+  if (typeof flatpickr !== "undefined") {
+      flatpickr(".pers-date", {
+          dateFormat: "Y-m-d",
+          allowInput: true
+      });
+  }
 
   // other expenses
   document.getElementById("addExpenseBtn").addEventListener("click", function(){
@@ -647,12 +662,11 @@ document.addEventListener("DOMContentLoaded", function(){
       div.querySelector("input[name='other_expense_name[]']").addEventListener("input", updateSummary);
   });
 
-  // initial calc
   document.querySelectorAll("tr").forEach(row => updateRowSubtotal(row));
   updateSummary();
 });
-
 </script>
+
 
 <?php
 $content = ob_get_clean();
