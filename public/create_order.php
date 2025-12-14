@@ -502,8 +502,6 @@ ob_start();
 }
 </style>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
@@ -524,7 +522,7 @@ document.addEventListener("DOMContentLoaded", function(){
           return;
       }
 
-      // Products / split / ducted
+      // Products / split / ducted / equipment
       const input = row.querySelector(".qty-input");
       if(!input) return;
       const price = parseFloatSafe(input.dataset.price);
@@ -563,7 +561,6 @@ document.addEventListener("DOMContentLoaded", function(){
           if(amount <= 0) return;
 
           let qty = "";
-
           if(row.querySelector(".pers-hours")){
               qty = row.querySelector(".pers-hours").value + " hr";
           } else if(row.querySelector(".qty-input")){
@@ -578,43 +575,44 @@ document.addEventListener("DOMContentLoaded", function(){
           summaryEl.appendChild(div);
       });
 
-      document.querySelectorAll("input[name='other_expense_name[]']").forEach((nameInput, i) => {
-          const amountInput = document.querySelectorAll("input[name='other_expense_amount[]']")[i];
-          const name = nameInput.value.trim();
-          const amount = parseFloatSafe(amountInput.value);
-
-          if(name && amount > 0){
-              const div = document.createElement("div");
-              div.className = "summary-item flex justify-between py-1";
-              div.innerHTML =
-                  `<span>${name}</span>
-                   <span>$${fmt(amount)}</span>`;
-              summaryEl.appendChild(div);
-          }
-      });
-
       if(summaryEl.innerHTML.trim() === "")
           summaryEl.innerHTML = "<div class='empty-note'>No items selected.</div>";
   }
 
-  /* -------------------------------------------------
-     FIX #1: UNIVERSAL + / - BUTTON HANDLER
-     Works for: Split, Ducted, Equipment, Personnel
-  ---------------------------------------------------*/
+  /* ==================================
+     FIX: ALL qtbn + / - BUTTONS
+     ================================== */
   document.querySelectorAll(".qtbn").forEach(btn => {
       btn.addEventListener("click", () => {
 
-          // find nearest quantity input
-          const input =
-              btn.parentElement.querySelector("input") ||
-              btn.closest("tr").querySelector(".qty-input, .pers-hours");
+          const wrapper = btn.closest(".qty-wrapper");
+          if (!wrapper) return;
 
-          if(!input) return;
+          const input = wrapper.querySelector("input");
+          if (!input) return;
 
-          let val = parseFloatSafe(input.value);
+          let val = parseFloat(input.value) || 0;
 
-          if(btn.classList.contains("plus")) val++;
-          else if(btn.classList.contains("minus")) val = Math.max(0, val - 1);
+          if (
+              btn.classList.contains("plus") ||
+              btn.classList.contains("split-plus") ||
+              btn.classList.contains("ducted-plus") ||
+              btn.classList.contains("equip-plus") ||
+              btn.classList.contains("hour-plus")
+          ) {
+              val++;
+          }
+          else if (
+              btn.classList.contains("minus") ||
+              btn.classList.contains("split-minus") ||
+              btn.classList.contains("ducted-minus") ||
+              btn.classList.contains("equip-minus") ||
+              btn.classList.contains("hour-minus")
+          ) {
+              val = Math.max(0, val - 1);
+          } else {
+              return;
+          }
 
           input.value = val;
 
@@ -623,7 +621,9 @@ document.addEventListener("DOMContentLoaded", function(){
       });
   });
 
-  // qty + personnel hours direct input
+  /* ==================================
+     DIRECT INPUT CHANGES
+     ================================== */
   document.querySelectorAll(".qty-input, .pers-hours").forEach(input => {
       input.addEventListener("input", () => {
           updateRowSubtotal(input.closest("tr"));
@@ -631,18 +631,23 @@ document.addEventListener("DOMContentLoaded", function(){
       });
   });
 
-  /* -------------------------------------------------
-     FIX #2: PERSONNEL DATE PICKER INIT
-  ---------------------------------------------------*/
+  /* ==================================
+     FIX: PERSONNEL DATE PICKER
+     ================================== */
   if (typeof flatpickr !== "undefined") {
-      flatpickr(".pers-date", {
-          dateFormat: "Y-m-d",
-          allowInput: true
+      document.querySelectorAll(".personnel-date").forEach(input => {
+          input.type = "text"; // important
+          flatpickr(input, {
+              dateFormat: "Y-m-d",
+              allowInput: true
+          });
       });
   }
 
-  // other expenses
-  document.getElementById("addExpenseBtn").addEventListener("click", function(){
+  /* ==================================
+     OTHER EXPENSES
+     ================================== */
+  document.getElementById("addExpenseBtn")?.addEventListener("click", function(){
       const container = document.getElementById("otherExpensesContainer");
       const div = document.createElement("div");
       div.className = "flex gap-2 mb-2";
@@ -662,10 +667,15 @@ document.addEventListener("DOMContentLoaded", function(){
       div.querySelector("input[name='other_expense_name[]']").addEventListener("input", updateSummary);
   });
 
+  /* ==================================
+     INITIAL CALC
+     ================================== */
   document.querySelectorAll("tr").forEach(row => updateRowSubtotal(row));
   updateSummary();
+
 });
 </script>
+
 
 
 <?php
