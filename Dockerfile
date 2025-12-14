@@ -1,3 +1,6 @@
+# -------------------------------
+# Base image
+# -------------------------------
 FROM php:8.2-apache
 
 # -------------------------------
@@ -13,7 +16,7 @@ RUN a2dismod mpm_event \
 RUN docker-php-ext-install pdo pdo_mysql
 
 # -------------------------------
-# Enable Apache rewrite
+# Enable Apache modules
 # -------------------------------
 RUN a2enmod rewrite headers
 
@@ -28,11 +31,16 @@ WORKDIR /var/www/html
 COPY . /var/www/html/
 
 # -------------------------------
-# Serve /public as DocumentRoot
+# Serve /public as DocumentRoot safely
 # -------------------------------
-RUN rm -rf /var/www/html/index.html \
- && sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf \
- && mkdir -p /var/www/html/public
+RUN mkdir -p /var/www/html/public \
+ && rm -f /var/www/html/index.html \
+ && sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
+
+# -------------------------------
+# Ensure /public folder contains files
+# -------------------------------
+RUN cp -r /var/www/html/* /var/www/html/public/ || true
 
 # -------------------------------
 # Set permissions
@@ -47,4 +55,4 @@ EXPOSE 80
 # -------------------------------
 # Start Apache in foreground
 # -------------------------------
-CMD ["apac]()
+CMD ["apache2-foreground"]
