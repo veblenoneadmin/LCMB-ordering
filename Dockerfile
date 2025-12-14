@@ -13,10 +13,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy project files including composer.json
+# Copy project files
 COPY . /var/www/html/
 
-# Install PHP dependencies (if any)
+# Install PHP dependencies if composer.json exists
 RUN if [ -f composer.json ]; then composer install --no-dev --optimize-autoloader; fi
 
 # Serve /public as DocumentRoot safely
