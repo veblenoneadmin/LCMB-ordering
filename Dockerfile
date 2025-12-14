@@ -1,3 +1,4 @@
+# Base image: PHP + Apache prefork-compatible
 FROM php:8.2-apache-bullseye
 
 # Install PHP extensions
@@ -6,11 +7,17 @@ RUN docker-php-ext-install pdo pdo_mysql
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy project files
+# Copy project files including composer.json
 COPY . /var/www/html/
+
+# Install PHP dependencies (if any)
+RUN if [ -f composer.json ]; then composer install --no-dev --optimize-autoloader; fi
 
 # Serve /public as DocumentRoot safely
 RUN mkdir -p /var/www/html/public \
