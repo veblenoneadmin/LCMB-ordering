@@ -1,50 +1,23 @@
-# Base image
 FROM php:8.2-apache
 
-# -------------------------------
-# FORCE only one Apache MPM
-# -------------------------------
-RUN rm -f /etc/apache2/mods-enabled/mpm_* \
- && a2enmod mpm_prefork
-
-# -------------------------------
-# Install PHP extensions
-# -------------------------------
+# Install extensions
 RUN docker-php-ext-install pdo pdo_mysql
 
-# -------------------------------
-# Enable required Apache modules
-# -------------------------------
-RUN a2enmod rewrite headers
+# Enable Apache rewrite
+RUN a2enmod rewrite
 
-# -------------------------------
 # Set working directory
-# -------------------------------
 WORKDIR /var/www/html
 
-# -------------------------------
-# Copy project files
-# -------------------------------
+# Copy all project files
 COPY . /var/www/html/
 
-# -------------------------------
-# Serve /public as DocumentRoot
-# -------------------------------
-RUN rm -f /var/www/html/index.html \
- && sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
- && mkdir -p /var/www/html/public
+# Make Apache serve the /public folder
+RUN rm -rf /var/www/html/index.html
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# -------------------------------
-# Set permissions
-# -------------------------------
+# Permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# -------------------------------
-# Expose port
-# -------------------------------
 EXPOSE 80
-
-# -------------------------------
-# Start Apache in foreground with debug logs
-# -------------------------------
-CMD ["apache2ctl", "-DFOREGROUND", "-e", "debug"]
+CMD ["apache2-foreground"]
