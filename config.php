@@ -1,19 +1,17 @@
 <?php
 declare(strict_types=1);
 
-// -----------------------------
-// Railway Internal DB Config
-// -----------------------------
-$host    = "mysql.railway.internal";   // ends in .railway.internal
-$port    = 3306;
-$user    = "root";
-$pass    = "THgMALdtucPApKGCBKzkeMQjyvoNwsLK";
-$dbname  = "railway";
-$charset = "utf8mb4";
+$host = $_ENV['MYSQLHOST'] ?? null;
+$port = $_ENV['MYSQLPORT'] ?? 3306;
+$db   = $_ENV['MYSQLDATABASE'] ?? null;
+$user = $_ENV['MYSQLUSER'] ?? null;
+$pass = $_ENV['MYSQLPASSWORD'] ?? null;
 
-$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
+if (!$host || !$db || !$user || !$pass) {
+    die('Database environment variables are missing');
+}
 
-$pdo = null;
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
 
 try {
     $pdo = new PDO(
