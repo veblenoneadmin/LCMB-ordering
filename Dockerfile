@@ -1,23 +1,29 @@
-FROM php:8.2-apache
+FROM php:8.2-apache-bullseye
 
-# Install extensions
+# Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Enable Apache rewrite
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite headers
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy all project files
+# Copy project files
 COPY . /var/www/html/
 
-# Make Apache serve the /public folder
-RUN rm -rf /var/www/html/index.html
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# Serve /public as DocumentRoot safely
+RUN mkdir -p /var/www/html/public \
+ && rm -f /var/www/html/index.html \
+ && sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
 
-# Permissions
-RUN chown -R www-data:www-data /var/www/html
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+ && find /var/www/html/public -type d -exec chmod 755 {} \; \
+ && find /var/www/html/public -type f -exec chmod 644 {} \;
 
+# Expose port
 EXPOSE 80
+
+# Start Apache in foreground
 CMD ["apache2-foreground"]
