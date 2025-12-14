@@ -1,11 +1,12 @@
 <?php
 declare(strict_types=1);
 
-$host = $_ENV['MYSQLHOST'] ?? null;
-$port = $_ENV['MYSQLPORT'] ?? 3306;
-$db   = $_ENV['MYSQLDATABASE'] ?? null;
-$user = $_ENV['MYSQLUSER'] ?? null;
-$pass = $_ENV['MYSQLPASSWORD'] ?? null;
+$host = $_ENV['MYSQLHOST'] ?? 'trolley.proxy.rlwy.net';
+$port = $_ENV['MYSQLPORT'] ?? 33634;
+$db   = $_ENV['MYSQLDATABASE'] ?? 'railway';
+$user = $_ENV['MYSQLUSER'] ?? 'root';
+$pass = $_ENV['MYSQLPASSWORD'] ?? 'wHstRwEcyamhrIAsZjvXbZaGooFqiIxR';
+
 
 if (!$host || !$db || !$user || !$pass) {
     die('Database environment variables are missing');
